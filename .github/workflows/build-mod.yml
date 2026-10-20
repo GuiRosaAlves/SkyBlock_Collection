@@ -23,7 +23,7 @@ jobs:
       - name: Build SkyVoid datapacks with Beet
         run: |
           uv sync --frozen
-          uv run beet -p beet-release.yaml
+          uv run beet -c beet-release.yaml
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
