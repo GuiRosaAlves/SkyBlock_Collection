@@ -24,6 +24,18 @@ neoForge {
             programArgument '--nogui'
         }
     }
+
+    // Make ModDevGradle initialize NeoForge for JUnit tests and supply its
+    // classes to the test source set, not just the main source set.
+    mods {
+        skyvoid {
+            sourceSet sourceSets.main
+        }
+    }
+    unitTest {
+        enable()
+        testedMod = mods.skyvoid
+    }
 }
 
 def packResourcesDir = layout.buildDirectory.dir('generated/skyvoid-packs')
