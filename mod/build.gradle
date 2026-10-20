@@ -80,3 +80,17 @@ tasks.named('jar', Jar).configure {
         into 'META-INF'
     }
 }
+
+// Run config-correction regression tests on each mod build.
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+}

@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,17 +61,22 @@ public final class SkyvoidConfig {
 
     static {
         var builder = new ModConfigSpec.Builder();
+        // defineInList tests absent values with null while generating a new TOML.
+        // List.of(...).contains(null) throws NullPointerException; ArrayList's
+        // contains(null) safely returns false so NeoForge can fill defaults.
 
         builder.push("new_world");
         WORLDGEN = builder.comment(
                 "Default worldgen datapack for newly created worlds.",
                 "WARNING: do not change the underlying worldgen of existing saves."
         ).translation("skyvoid.config.new_world.worldgen")
-                .defineInList("worldgen", WORLDGEN_IDS.getFirst(), WORLDGEN_IDS);
+                .defineInList("worldgen", WORLDGEN_IDS.getFirst(),
+                        new ArrayList<>(WORLDGEN_IDS));
 
         ISLAND = builder.comment("Default starter island datapack for new worlds.")
                 .translation("skyvoid.config.new_world.island")
-                .defineInList("island", ISLAND_IDS.getFirst(), ISLAND_IDS);
+                .defineInList("island", ISLAND_IDS.getFirst(),
+                        new ArrayList<>(ISLAND_IDS));
         builder.pop();
 
         Map<String, ModConfigSpec.BooleanValue> optional = new LinkedHashMap<>();
