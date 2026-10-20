@@ -25,7 +25,7 @@ public final class SkyVoid {
         container.registerConfig(ModConfig.Type.COMMON, SkyVoidConfig.COMMON_SPEC, "skyvoid-common.toml");
         container.registerConfig(ModConfig.Type.SERVER, SkyVoidConfig.SERVER_SPEC, "skyvoid-server.toml");
         modBus.addListener(this::addBuiltInPacks);
-        if (FMLEnvironment.dist == Dist.CLIENT) {
+        if (FMLEnvironment.getDist() == Dist.CLIENT) {
             SkyVoidClient.registerConfigScreen(container);
         }
         SkyVoidServer.register();
