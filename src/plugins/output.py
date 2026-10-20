@@ -19,6 +19,39 @@ rp_format = int(RP_FORMAT)
 rp_min_format = (int(f"{RP_FORMATS[0]}".split(".")[0]),int(f"{RP_FORMATS[0]}".split(".")[1]))
 rp_max_format = (int(f"{RP_FORMATS[-1]}".split(".")[0]),int(f"{RP_FORMATS[-1]}".split(".")[1]))
 
+
+def normalize_overlay_metadata(ctx: Context):
+    """Emit overlay metadata accepted by Minecraft's current pack parser."""
+    overlays = ctx.data.mcmeta.data.get("overlays")
+    if not isinstance(overlays, dict):
+        return
+
+    entries = overlays.get("entries")
+    if not isinstance(entries, list):
+        return
+
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+
+        formats = entry.get("formats")
+        if isinstance(formats, dict):
+            entry.setdefault("min_format", formats["min_inclusive"])
+            entry.setdefault("max_format", formats["max_inclusive"])
+            continue
+
+        min_format = entry.get("min_format")
+        max_format = entry.get("max_format")
+        if min_format is None or max_format is None:
+            continue
+
+        min_major = min_format[0] if isinstance(min_format, (list, tuple)) else min_format
+        max_major = max_format[0] if isinstance(max_format, (list, tuple)) else max_format
+        entry["formats"] = {
+            "min_inclusive": min_major,
+            "max_inclusive": max_major,
+        }
+
 def beet_default(ctx: Context):
     """Saves the datapack to the ./out folder."""
     out_dir = str(ctx.directory.parent).replace("src", "out")
@@ -36,6 +69,7 @@ def beet_default(ctx: Context):
     ctx.data.mcmeta.data.update(
         {"id": f"{ctx.project_id}", "version": ctx.project_version}
     )
+    normalize_overlay_metadata(ctx)
 
     ctx.data[Module].clear()  # manually cleanup bolt modules
 
@@ -94,6 +128,7 @@ def release(ctx: Context):
     ctx.data.mcmeta.data.update(
         {"id": f"{ctx.project_id}", "version": ctx.project_version}
     )
+    normalize_overlay_metadata(ctx)
 
     ctx.data[Module].clear()  # manually cleanup bolt modules
 
@@ -151,6 +186,7 @@ def bundle(ctx: Context):
     ctx.data.mcmeta.data.update(
         {"id": f"{ctx.project_id}", "version": ctx.project_version}
     )
+    normalize_overlay_metadata(ctx)
 
     ctx.data[Module].clear()  # manually cleanup bolt modules
 

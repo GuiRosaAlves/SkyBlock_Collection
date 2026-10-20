@@ -87,6 +87,18 @@ tasks.register('verifySkyvoidPacks') {
             if (!root.isDirectory() || !new File(root, 'pack.mcmeta').isFile()) {
                 throw new GradleException("Catalog pack '${pack.id}' was not staged as a valid datapack.")
             }
+
+            def metadata = new groovy.json.JsonSlurper().parse(new File(root, 'pack.mcmeta'))
+            def overlays = metadata.overlays?.entries
+            if (overlays != null) {
+                overlays.each { overlay ->
+                    def formats = overlay.formats
+                    if (formats == null || formats.min_inclusive == null || formats.max_inclusive == null ||
+                        overlay.min_format == null || overlay.max_format == null) {
+                        throw new GradleException("Catalog pack '${pack.id}' has overlay metadata that Minecraft 26.2 will reject.")
+                    }
+                }
+            }
         }
         catalog.resourcePacks.each { pack ->
             def root = stagedPacks.get().file("assets/skyvoid/resourcepacks/${pack.id}").asFile
