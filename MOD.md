@@ -6,4 +6,4 @@ The NeoForge Mods screen exposes every `skyvoid_additions` setting. Its global v
 
 The server config contains `structure_rules`. A rule has the form `namespace:structure=enabled,density,weight`. Density is reserved for the generated worldgen override stage; native weight only affects structures that compete within the same Minecraft structure set. It is stored in the per-world `serverconfig/skyvoid-server.toml` location by NeoForge.
 
-GitHub Actions is the only supported build and verification route. The workflow first builds all Beet packs, then stages them inside the jar and verifies every catalog entry has a `pack.mcmeta` file.
+GitHub Actions is the only supported build and verification route. The workflow first builds all Beet packs, then stages them inside the jar and verifies every catalog entry has a `pack.mcmeta` file. Tagged releases publish the SkyVoid data packs, resource pack, bundled packs, NeoForge jar, and `SHA256SUMS.txt` as direct GitHub Release assets. Download the jar from the [latest release](https://github.com/GuiRosaAlves/SkyBlock_Collection/releases/latest), rather than an Actions artifact.
