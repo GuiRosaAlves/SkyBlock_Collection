@@ -59,9 +59,11 @@ class NeoForgeStagingTests(unittest.TestCase):
     def test_stages_isolated_datapacks_and_resourcepack(self):
         self.add_required_packs()
         self.add_pack("rp_skyvoid_advancements")
+        self.add_pack("skyvoid_compat_terralith", version="1_0_2+terralith-2_5_5")
         outcome = build_catalog(self.build, self.staged, self.source)
-        self.assertEqual(outcome["packs"], len(WORLDGEN) + len(ISLANDS) + 2)
+        self.assertEqual(outcome["packs"], len(WORLDGEN) + len(ISLANDS) + 3)
         self.assertEqual(outcome["addition_settings"], 2)
+        self.assertTrue((self.staged / "data/skyvoid/datapacks/skyvoid_compat_terralith/pack.mcmeta").is_file())
         for pack_id in WORLDGEN | ISLANDS | {"skyvoid_additions"}:
             self.assertTrue(
                 (self.staged / "data/skyvoid/datapacks" / pack_id / "pack.mcmeta").is_file()
