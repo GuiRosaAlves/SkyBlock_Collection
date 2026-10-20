@@ -1,6 +1,8 @@
 # SkyVoid NeoForge distribution
 
-The `skyvoid` jar packages each supported SkyVoid release datapack as a built-in pack. Create a world, open the Data Packs / Experiments selector, and choose exactly one `Sky Void Worldgen` pack and one `Sky Void ... Island` pack. Optional packs and compatibility packs appear in the same selector. The companion Sky Void Advancements resource pack appears in the resource-pack selector.
+The `skyvoid` jar packages each supported SkyVoid release datapack as a built-in pack. Create a world, open the Data Packs / Experiments selector, and choose exactly one `Sky Void Worldgen` pack and one `Sky Void ... Island` pack. Optional packs appear in the same selector. The companion Sky Void Advancements resource pack appears in the resource-pack selector.
+
+The Amplified Nether, Nullscape, and Terralith compatibility packs are not bundled for Minecraft 26.2. They import world-generation definitions from Minecraft 1.21.10 and must be migrated before they can safely be selected on 26.2.
 
 The NeoForge Mods screen exposes every `skyvoid_additions` setting. Its global values are applied when a world starts and the selected `Sky Void Additions` datapack is active. Existing in-world menu changes are overwritten the next time that world loads.
 

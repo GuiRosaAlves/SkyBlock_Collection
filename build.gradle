@@ -34,7 +34,12 @@ tasks.register('stageSkyvoidPacks', Sync) {
     if (!source.isDirectory()) {
         throw new GradleException("SkyVoid Beet output directory does not exist: ${source}")
     }
-    def archives = fileTree(source) { include 'skyvoid_*_v*-MC_26_2.zip' }.files.sort()
+    def archives = fileTree(source) {
+        include 'skyvoid_*_v*-MC_26_2.zip'
+        // These compatibility packs import 1.21.10 worldgen definitions and
+        // cannot be loaded by Minecraft 26.2 yet.
+        exclude 'skyvoid_compat_*'
+    }.files.sort()
     if (archives.empty) {
         throw new GradleException("No SkyVoid release archives found in ${source}. Run 'uv run beet -c beet-release.yaml' first.")
     }

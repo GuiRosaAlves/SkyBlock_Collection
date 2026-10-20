@@ -28,10 +28,7 @@ public final class SkyVoidCatalog {
             new PackDefinition("skyvoid_biome_islands", "Sky Void Biome Islands", Kind.OPTIONAL, false),
             new PackDefinition("skyvoid_no_end_ship", "Sky Void No End Ship", Kind.OPTIONAL, false),
             new PackDefinition("skyvoid_sand_island", "Sky Void Sand Island", Kind.OPTIONAL, true),
-            new PackDefinition("skyvoid_vanilla_oneblock_starter", "Sky Void Vanilla Oneblock Starter", Kind.OPTIONAL, false),
-            new PackDefinition("skyvoid_compat_amplified_nether", "Sky Void Amplified Nether Compatibility", Kind.COMPATIBILITY, false),
-            new PackDefinition("skyvoid_compat_nullscape", "Sky Void Nullscape Compatibility", Kind.COMPATIBILITY, false),
-            new PackDefinition("skyvoid_compat_terralith", "Sky Void Terralith Compatibility", Kind.COMPATIBILITY, false));
+            new PackDefinition("skyvoid_vanilla_oneblock_starter", "Sky Void Vanilla Oneblock Starter", Kind.OPTIONAL, false));
 
     public static final List<ResourcePackDefinition> RESOURCE_PACKS = List.of(
             new ResourcePackDefinition("rp_skyvoid_advancements", "Sky Void Advancements Resources", "skyvoid_advancements"));
