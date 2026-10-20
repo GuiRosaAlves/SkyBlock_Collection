@@ -173,7 +173,7 @@ def build_catalog(build_dir: Path, output_dir: Path, source_file: Path) -> dict:
     language_dir = output_dir / "assets" / "skyvoid" / "lang"
     language_dir.mkdir(parents=True, exist_ok=True)
     (language_dir / "en_us.json").write_text(
-        json.dumps(translations, indent=2) + "\\n", encoding="utf-8"
+        json.dumps(translations, indent=2) + "\n", encoding="utf-8"
     )
     return {"packs": len(catalog), "addition_settings": len(additions)}
 
