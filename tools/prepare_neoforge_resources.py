@@ -155,6 +155,26 @@ def build_catalog(build_dir: Path, output_dir: Path, source_file: Path) -> dict:
     (settings_dir / "additions-defaults.json").write_text(
         json.dumps(additions, indent=2) + "\n", encoding="utf-8"
     )
+    # Name and describe each setting in NeoForge's built-in config screen.
+    translations = {
+        "skyvoid.config.new_world.worldgen": "World Generation Profile",
+        "skyvoid.config.new_world.island": "Starting Island",
+    }
+    for item in catalog:
+        if item["group"] == "optional":
+            pack_id = item["id"]
+            translations["skyvoid.config.optional_packs." + pack_id] = (
+                pack_id.removeprefix("skyvoid_").replace("_", " ").title()
+            )
+    for setting in additions:
+        translations["skyvoid.config.additions." + setting] = (
+            setting.replace("_", " ").title()
+        )
+    language_dir = output_dir / "assets" / "skyvoid" / "lang"
+    language_dir.mkdir(parents=True, exist_ok=True)
+    (language_dir / "en_us.json").write_text(
+        json.dumps(translations, indent=2) + "\\n", encoding="utf-8"
+    )
     return {"packs": len(catalog), "addition_settings": len(additions)}
 
 
