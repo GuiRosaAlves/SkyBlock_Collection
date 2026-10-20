@@ -1,0 +1,106 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.gradle.userdev' version '7.1.39'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "net.neoforged:neoforge:${neo_version}"
+}
+
+def skyvoidPackDir = providers.gradleProperty('skyvoidPackDir').orElse('build').get()
+def catalogFile = file('src/main/resources/assets/skyvoid/pack_catalog.json')
+def stagedPacks = layout.buildDirectory.dir('generated/skyvoidPacks')
+
+tasks.register('stageSkyvoidPacks', Sync) {
+    group = 'build'
+    description = 'Stages every Beet release pack as an individually selectable built-in pack.'
+    into(stagedPacks)
+
+    def source = file(skyvoidPackDir)
+    if (!source.isDirectory()) {
+        throw new GradleException("SkyVoid Beet output directory does not exist: ${source}")
+    }
+    def archives = fileTree(source) { include 'skyvoid_*_v*-MC_26_2.zip' }.files.sort()
+    if (archives.empty) {
+        throw new GradleException("No SkyVoid release archives found in ${source}. Run 'uv run beet -c beet-release.yaml' first.")
+    }
+    archives.each { archive ->
+        def packId = archive.name.replaceFirst(/_v[0-9][^_]*(?:_[^_]+)*-MC_26_2\.zip$/, '')
+        from(zipTree(archive)) {
+            into("data/skyvoid/datapacks/${packId}")
+        }
+    }
+
+    def resourceArchives = fileTree(source) { include 'rp_skyvoid_*_v*-MC_26_2.zip' }.files.sort()
+    resourceArchives.each { archive ->
+        def packId = archive.name.replaceFirst(/_v[0-9][^_]*(?:_[^_]+)*-MC_26_2\.zip$/, '')
+        from(zipTree(archive)) {
+            into("assets/skyvoid/resourcepacks/${packId}")
+        }
+    }
+}
+
+sourceSets.main.resources {
+    srcDir(stagedPacks)
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    dependsOn(tasks.named('stageSkyvoidPacks'))
+    def replaceProperties = [
+        minecraft_version: minecraft_version,
+        minecraft_version_range: minecraft_version_range,
+        neo_version: neo_version,
+        mod_id: mod_id,
+        mod_name: mod_name,
+        mod_license: mod_license,
+        mod_version: mod_version
+    ]
+    inputs.properties(replaceProperties)
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand(replaceProperties)
+    }
+}
+
+tasks.register('verifySkyvoidPacks') {
+    group = 'verification'
+    description = 'Checks that the packaged built-in packs match the public SkyVoid catalog.'
+    dependsOn(tasks.named('stageSkyvoidPacks'))
+    inputs.file(catalogFile)
+    doLast {
+        def catalog = new groovy.json.JsonSlurper().parse(catalogFile)
+        catalog.packs.each { pack ->
+            def root = stagedPacks.get().file("data/skyvoid/datapacks/${pack.id}").asFile
+            if (!root.isDirectory() || !new File(root, 'pack.mcmeta').isFile()) {
+                throw new GradleException("Catalog pack '${pack.id}' was not staged as a valid datapack.")
+            }
+        }
+        catalog.resourcePacks.each { pack ->
+            def root = stagedPacks.get().file("assets/skyvoid/resourcepacks/${pack.id}").asFile
+            if (!root.isDirectory() || !new File(root, 'pack.mcmeta').isFile()) {
+                throw new GradleException("Catalog resource pack '${pack.id}' was not staged as a valid resource pack.")
+            }
+        }
+    }
+}
+
+tasks.named('check').configure {
+    dependsOn(tasks.named('verifySkyvoidPacks'))
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
