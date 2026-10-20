@@ -23,7 +23,7 @@ cd mod
 gradle build
 ```
 
-Gradle runs the existing `uv run beet -c beet-release.yaml` pipeline,
+Gradle runs the existing `uv run --python 3.14 beet -p beet-release.yaml build` pipeline,
 then `tools/prepare_neoforge_resources.py` to stage pack resources
 under `mod/build/generated/skyvoid-packs`. The Java mod builds a JAR in
 `mod/build/libs/` after staging the resources.

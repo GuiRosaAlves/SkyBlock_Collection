@@ -158,7 +158,7 @@ synchronization policy must define what happens if both are used.
 ## Build, release, compatibility
 
 - Continue building individual ZIPs with
-  `uv run beet -c beet-release.yaml`.
+  `uv run --python 3.14 beet -p beet-release.yaml build`.
 - Copy/unpack validated ZIPs into the NeoForge resource staging directory
   **without** merging their `data/` trees across pack boundaries.
 - Build the JAR with the 26.2 ModDevGradle Gradle wrapper under `mod/`.

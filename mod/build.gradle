@@ -32,7 +32,7 @@ tasks.register('buildBeetPacks', Exec) {
     group = 'skyvoid'
     description = 'Builds the original standalone datapack ZIP releases with Beet.'
     workingDir = rootProject.projectDir.parentFile
-    commandLine 'uv', 'run', '--python', '3.14', 'beet', '-c', 'beet-release.yaml'
+    commandLine 'uv', 'run', '--python', '3.14', 'beet', '-p', 'beet-release.yaml', 'build'
 }
 
 tasks.register('stageBeetPacks', Exec) {
