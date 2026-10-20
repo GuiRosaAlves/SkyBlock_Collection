@@ -32,7 +32,7 @@ tasks.register('buildBeetPacks', Exec) {
     group = 'skyvoid'
     description = 'Builds the original standalone datapack ZIP releases with Beet.'
     workingDir = rootProject.projectDir.parentFile
-    commandLine 'uv', 'run', 'beet', '-c', 'beet-release.yaml'
+    commandLine 'uv', 'run', '--python', '3.14', 'beet', '-c', 'beet-release.yaml'
 }
 
 tasks.register('stageBeetPacks', Exec) {
@@ -40,7 +40,7 @@ tasks.register('stageBeetPacks', Exec) {
     description = 'Stages distinct datapacks and generated config defaults for the mod JAR.'
     dependsOn tasks.named('buildBeetPacks')
     workingDir = rootProject.projectDir.parentFile
-    commandLine 'uv', 'run', 'python', 'tools/prepare_neoforge_resources.py',
+    commandLine 'uv', 'run', '--python', '3.14', 'python', 'tools/prepare_neoforge_resources.py',
             '--build-dir', 'build', '--output-dir',
             packResourcesDir.get().asFile.absolutePath
 }
