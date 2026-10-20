@@ -41,7 +41,7 @@ OPTIONAL = {
 RESOURCES = {"rp_skyvoid_advancements"}
 VERSIONED_ARCHIVE = re.compile(
     r"^(?P<name>(?:skyvoid|rp_skyvoid)[a-z0-9_]+)"
-    r"_v(?P<version>[0-9][0-9_]*)-MC_26_2\.zip$"
+    r"_v(?P<version>[0-9][0-9_a-zA-Z+.-]*)-MC_26_2\.zip$"
 )
 DEFAULT_SCORE = re.compile(
     r"^execute unless score (?P<setting>[a-z0-9_]+) skyvoid_config "
