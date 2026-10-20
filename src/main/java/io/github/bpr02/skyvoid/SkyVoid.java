@@ -38,9 +38,7 @@ public final class SkyVoid {
                         Identifier.fromNamespaceAndPath(MOD_ID, "data/skyvoid/datapacks/" + pack.id()),
                         PackType.SERVER_DATA,
                         Component.literal("SkyVoid: " + pack.name()),
-                        // DEFAULT keeps selectable packs disabled until the player enables them
-                        // in the world-creation Data Packs screen.
-                        PackSource.DEFAULT,
+                        PackSource.BUILT_IN,
                         false,
                         Pack.Position.TOP);
             }
