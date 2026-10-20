@@ -8,10 +8,10 @@ import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackSource;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.event.AddPackFindersEvent;
 import org.slf4j.Logger;
 
@@ -25,7 +25,9 @@ public final class SkyVoid {
         container.registerConfig(ModConfig.Type.COMMON, SkyVoidConfig.COMMON_SPEC, "skyvoid-common.toml");
         container.registerConfig(ModConfig.Type.SERVER, SkyVoidConfig.SERVER_SPEC, "skyvoid-server.toml");
         modBus.addListener(this::addBuiltInPacks);
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> SkyVoidClient.registerConfigScreen(container));
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            SkyVoidClient.registerConfigScreen(container);
+        }
         SkyVoidServer.register();
     }
 
