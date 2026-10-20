@@ -96,7 +96,7 @@ public final class SkyvoidConfig {
                     .comment("SkyVoid Additions mechanic: " + id
                             + " (applied to its skyvoid_config scoreboard setting).")
                     .translation("skyvoid.config.additions." + id)
-                    .define(id, entry.getValue()));
+                    .define(id, entry.getValue().booleanValue()));
         }
         builder.pop();
         ADDITIONS = Map.copyOf(additions);
