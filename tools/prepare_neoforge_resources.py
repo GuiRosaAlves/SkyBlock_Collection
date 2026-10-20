@@ -41,11 +41,11 @@ OPTIONAL = {
 RESOURCES = {"rp_skyvoid_advancements"}
 VERSIONED_ARCHIVE = re.compile(
     r"^(?P<name>(?:skyvoid|rp_skyvoid)[a-z0-9_]+)"
-    r"_v(?P<version>[0-9][0-9_]*)-MC_26_2\\.zip$"
+    r"_v(?P<version>[0-9][0-9_]*)-MC_26_2\.zip$"
 )
 DEFAULT_SCORE = re.compile(
     r"^execute unless score (?P<setting>[a-z0-9_]+) skyvoid_config "
-    r"matches 0\\.\\.1 run scoreboard players set "
+    r"matches 0\.\.1 run scoreboard players set "
     r"(?P=setting) skyvoid_config (?P<value>[01])$"
 )
 
@@ -94,7 +94,7 @@ def stage_pack(archive: Path, destination: Path) -> str:
             if (
                 member_path.is_absolute()
                 or ".." in member_path.parts
-                or "\\\\" in member.filename
+                or "\\" in member.filename
             ):
                 raise ValueError(f"Unsafe ZIP entry in {archive.name}: {member.filename}")
             # Exclude license/readme duplicates, caches, and unneeded packaging files.
