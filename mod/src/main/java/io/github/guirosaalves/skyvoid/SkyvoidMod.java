@@ -158,8 +158,16 @@ public final class SkyvoidMod {
             // An imported/initialized world keeps its own values across reloads
             // even when global COMMON defaults have changed.
             var profile = SkyvoidWorldProfile.forServer(event.getServer());
-            applyAdditions(event.getServer(),
-                    profile.initialized() ? profile.additions() : snapshotAdditions());
+            if (profile.initialized()) {
+                applyAdditions(event.getServer(), profile.additions());
+            } else if (!SkyvoidLegacyPackDetector.hasExternalAdditions(
+                    event.getServer().getPackRepository().getSelectedIds())) {
+                applyAdditions(event.getServer(), snapshotAdditions());
+            }
+            // If the existing world has a standalone Additions ZIP enabled,
+            // leave its scoreboards entirely alone until migration imports
+            // those values. Saving an explicit change in Mods config still
+            // applies it through onConfigReloaded().
         }
     }
 }
