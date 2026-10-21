@@ -122,6 +122,13 @@ public final class SkyvoidMod {
     }
 
     private void applyAdditions(MinecraftServer server, Map<String, Boolean> desired) {
+        // Persist live edits for worlds that already have an imported profile.
+        // Uninitialized profiles are deliberately left untouched until the
+        // migration stage can determine whether this is a legacy datapack save.
+        var profile = SkyvoidWorldProfile.forServer(server);
+        if (profile.initialized()) {
+            profile.changeAdditions(desired);
+        }
         var commands = server.getCommands();
         var source = server.createCommandSourceStack();
         for (String command : SkyvoidAdditionsCommands.changes(appliedAdditions, desired)) {
@@ -148,7 +155,11 @@ public final class SkyvoidMod {
         activeServer = event.getServer();
         appliedAdditions = Map.of();
         if (SkyvoidConfig.OPTIONAL.get("skyvoid_additions").get()) {
-            applyAdditions(event.getServer(), snapshotAdditions());
+            // An imported/initialized world keeps its own values across reloads
+            // even when global COMMON defaults have changed.
+            var profile = SkyvoidWorldProfile.forServer(event.getServer());
+            applyAdditions(event.getServer(),
+                    profile.initialized() ? profile.additions() : snapshotAdditions());
         }
     }
 }
