@@ -1,0 +1,146 @@
+name: NeoForge 26.2 prototype
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  staging-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Test resource staging
+        run: python -m unittest discover -s tests -v
+
+  mod-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.2.1'
+      - name: Assemble standalone datapacks and NeoForge JAR
+        working-directory: mod
+        run: gradle build --no-daemon --stacktrace
+      - name: Upload standalone SkyVoid Additions datapack for testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyvoid-additions-datapack-26.2
+          path: build/skyvoid_additions_v*-MC_26_2.zip
+          if-no-files-found: error
+      # Compile success is not enough: start an actual client to catch FML
+      # lifecycle/configuration errors before publishing the development JAR.
+      - name: Install headless client test dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libglx-mesa0
+      - name: Smoke test client startup
+        working-directory: mod
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: |
+          set +e
+          timeout --signal=TERM --kill-after=10s 150s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            gradle runClient --no-daemon --console=plain \
+            > "$RUNNER_TEMP/skyvoid-client.log" 2>&1
+          status=$?
+          set -e
+          cat "$RUNNER_TEMP/skyvoid-client.log"
+          if grep -Eiq 'ModLoadingException|Game crashed!|FATAL.*ModLoader|Exception in thread|java[.]lang[.]NullPointerException' "$RUNNER_TEMP/skyvoid-client.log"; then
+            echo 'NeoForge reported a client startup failure.' >&2
+            exit 1
+          fi
+          if [ "$status" -ne 124 ]; then
+            echo "Client did not remain running through the smoke window (exit $status)." >&2
+            exit 1
+          fi
+          if ! grep -Eq 'Reloading ResourceManager|Sound engine started|Creating shaders|Loaded .* texture' "$RUNNER_TEMP/skyvoid-client.log"; then
+            echo 'Client did not advance far enough to validate resource loading.' >&2
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: skyvoid-neoforge-26.2-prototype
+          path: mod/build/libs/*.jar
+
+  production-server-smoke:
+    # The ModDevGradle runClient task uses a development classpath. A clean
+    # production NeoForge installation catches failures hidden by that path.
+    needs: mod-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/download-artifact@v4
+        with:
+          name: skyvoid-neoforge-26.2-prototype
+          path: packaged-jars
+      - name: Install production NeoForge server
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/skyvoid-prod-server/mods"
+          cp packaged-jars/*.jar "$RUNNER_TEMP/skyvoid-prod-server/mods/"
+          cd "$RUNNER_TEMP/skyvoid-prod-server"
+          curl --retry 3 --fail --location --silent --show-error \
+            -o neoforge-installer.jar \
+            'https://maven.neoforged.net/releases/net/neoforged/neoforge/26.2.0.93/neoforge-26.2.0.93-installer.jar'
+          java -jar neoforge-installer.jar --installServer > "$RUNNER_TEMP/skyvoid-installer.log" 2>&1 || {
+            cat "$RUNNER_TEMP/skyvoid-installer.log"
+            exit 1
+          }
+          echo 'eula=true' > eula.txt
+      - name: Smoke test packaged JAR in production
+        run: |
+          set +e
+          cd "$RUNNER_TEMP/skyvoid-prod-server"
+          timeout --signal=TERM --kill-after=10s 160s \
+            bash ./run.sh nogui > "$RUNNER_TEMP/skyvoid-prod-server.log" 2>&1
+          status=$?
+          set -e
+          cat "$RUNNER_TEMP/skyvoid-prod-server.log"
+          if grep -Eiq 'ModLoadingException|Failed to wait for future|Game crashed!|NullPointerException|Exception in thread|FATAL.*ModLoader' "$RUNNER_TEMP/skyvoid-prod-server.log"; then
+            echo 'Packaged SkyVoid JAR failed production initialization.' >&2
+            exit 1
+          fi
+          if ! grep -Eq 'Done \(' "$RUNNER_TEMP/skyvoid-prod-server.log"; then
+            echo "Production server did not reach ready state (exit $status)." >&2
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: skyvoid-production-server-log
+          path: |
+            ${{ runner.temp }}/skyvoid-prod-server.log
+            ${{ runner.temp }}/skyvoid-installer.log
+          if-no-files-found: ignore

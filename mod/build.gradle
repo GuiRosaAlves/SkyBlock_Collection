@@ -1,0 +1,108 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+neoForge {
+    version = neo_version
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+            programArgument '--nogui'
+        }
+    }
+
+    // Make ModDevGradle initialize NeoForge for JUnit tests and supply its
+    // classes to the test source set, not just the main source set.
+    mods {
+        skyvoid {
+            sourceSet sourceSets.main
+        }
+    }
+    unitTest {
+        enable()
+        testedMod = mods.skyvoid
+    }
+}
+
+def packResourcesDir = layout.buildDirectory.dir('generated/skyvoid-packs')
+
+tasks.register('buildBeetPacks', Exec) {
+    group = 'skyvoid'
+    description = 'Builds the original standalone datapack ZIP releases with Beet.'
+    workingDir = rootProject.projectDir.parentFile
+    commandLine 'uv', 'run', '--python', '3.14', 'beet', '-p', 'beet-release.yaml', 'build'
+}
+
+tasks.register('stageBeetPacks', Exec) {
+    group = 'skyvoid'
+    description = 'Stages distinct datapacks and generated config defaults for the mod JAR.'
+    dependsOn tasks.named('buildBeetPacks')
+    workingDir = rootProject.projectDir.parentFile
+    commandLine 'uv', 'run', '--python', '3.14', 'python', 'tools/prepare_neoforge_resources.py',
+            '--build-dir', 'build', '--output-dir',
+            packResourcesDir.get().asFile.absolutePath
+}
+
+sourceSets.main.resources.srcDir packResourcesDir
+
+tasks.named('processResources').configure {
+    dependsOn tasks.named('stageBeetPacks')
+}
+
+def generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    def props = [
+        minecraft_version: minecraft_version,
+        minecraft_version_range: minecraft_version_range,
+        neo_version: neo_version,
+        mod_id: mod_id,
+        mod_name: mod_name,
+        mod_license: mod_license,
+        mod_version: mod_version,
+    ]
+    inputs.properties props
+    expand props
+    from 'src/main/templates'
+    into layout.buildDirectory.dir('generated/sources/modMetadata')
+}
+
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.named('jar', Jar).configure {
+    from(rootProject.projectDir.parentFile) {
+        include 'LICENSE'
+        into 'META-INF'
+    }
+}
+
+// Run config-correction regression tests on each mod build.
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+}

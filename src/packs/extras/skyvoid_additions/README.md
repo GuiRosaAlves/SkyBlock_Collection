@@ -143,7 +143,11 @@ The following settings are disabled by default
 
 ### Spiders Generate Cobwebs
 *cobwebs are obtainable with the weaving effect*  
-Spiders in ceiling edges will generate cobwebs
+Disabled by default. Set `cobwebs_from_spiders` to `1` via the in-game settings menu (or the SkyVoid mod config, then reopen the world).
+
+Every 2 seconds, normal spiders have a 5% chance to generate a cobweb when climbing near the top of a wall or directly beneath a ceiling, provided the placement space and block below are air (including cave air). Spiders on the ground will not generate cobwebs.
+
+If enabling it through the standalone datapack's scoreboard instead of the settings menu, run `/function skyvoid_additions:technical/load` to restart the scheduled mechanic.
 
 ### Vexes Convert to Allays
 *in Standard SkyBlock, mansions and pillager towers generate with allays, but no blocks*  
