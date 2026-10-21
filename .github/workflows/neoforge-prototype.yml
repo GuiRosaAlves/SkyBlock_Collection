@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - feature/neoforge-26-2-integration-plan
   push:
     branches:
       - main
