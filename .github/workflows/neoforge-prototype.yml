@@ -47,6 +47,12 @@ jobs:
       - name: Assemble standalone datapacks and NeoForge JAR
         working-directory: mod
         run: gradle build --no-daemon --stacktrace
+      - name: Upload standalone SkyVoid Additions datapack for testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyvoid-additions-datapack-26.2
+          path: build/skyvoid_additions_v*-MC_26_2.zip
+          if-no-files-found: error
       # Compile success is not enough: start an actual client to catch FML
       # lifecycle/configuration errors before publishing the development JAR.
       - name: Install headless client test dependencies
