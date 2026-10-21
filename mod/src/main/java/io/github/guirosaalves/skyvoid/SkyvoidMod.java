@@ -11,9 +11,13 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddPackFindersEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.minecraft.server.MinecraftServer;
+import java.util.LinkedHashMap;
 
 import java.util.Map;
 
@@ -28,6 +32,11 @@ import java.util.Map;
 public final class SkyvoidMod {
     public static final String MOD_ID = "skyvoid";
 
+    // Only the logical server may apply world-scoped settings. A remote client
+    // must not attempt to apply its local COMMON config to a multiplayer server.
+    private volatile MinecraftServer activeServer;
+    private Map<String, Boolean> appliedAdditions = Map.of();
+
     private static final Map<String, String> COMPAT_MODS = Map.of(
             "skyvoid_compat_amplified_nether", "amplified_nether",
             "skyvoid_compat_nullscape", "nullscape",
@@ -37,6 +46,7 @@ public final class SkyvoidMod {
     public SkyvoidMod(IEventBus modBus, ModContainer modContainer) {
         modContainer.registerConfig(ModConfig.Type.COMMON, SkyvoidConfig.SPEC);
         modBus.addListener(this::addPackFinders);
+        modBus.addListener(this::onConfigReloaded);
         NeoForge.EVENT_BUS.register(this);
     }
 
@@ -84,26 +94,61 @@ public final class SkyvoidMod {
     }
 
     /**
-     * Apply the pre-world config only after the datapack created its
-     * skyvoid_config scoreboard objective; then refresh scheduled mechanics.
-     * This currently runs at EACH server start, including existing worlds:
-     * per-world persistence must be added before a stable release.
+     * NeoForge emits config reloads on the mod bus, potentially off-thread.
+     * The config screen saves the COMMON spec on Done; marshal changes onto
+     * the logical server, so dedicated servers and integrated servers share
+     * one safe application path. No active server means future-world defaults.
+     */
+    private void onConfigReloaded(ModConfigEvent.Reloading event) {
+        if (!MOD_ID.equals(event.getConfig().getModId())
+                || event.getConfig().getType() != ModConfig.Type.COMMON) {
+            return;
+        }
+        MinecraftServer server = activeServer;
+        if (server == null) {
+            return;
+        }
+        server.execute(() -> {
+            if (activeServer == server && SkyvoidConfig.OPTIONAL.get("skyvoid_additions").get()) {
+                applyAdditions(server, snapshotAdditions());
+            }
+        });
+    }
+
+    private static Map<String, Boolean> snapshotAdditions() {
+        Map<String, Boolean> values = new LinkedHashMap<>();
+        SkyvoidConfig.ADDITIONS.forEach((key, setting) -> values.put(key, setting.get()));
+        return Map.copyOf(values);
+    }
+
+    private void applyAdditions(MinecraftServer server, Map<String, Boolean> desired) {
+        var commands = server.getCommands();
+        var source = server.createCommandSourceStack();
+        for (String command : SkyvoidAdditionsCommands.changes(appliedAdditions, desired)) {
+            commands.performPrefixedCommand(source, command);
+        }
+        appliedAdditions = desired;
+    }
+
+    @SubscribeEvent
+    public void onServerStopped(ServerStoppedEvent event) {
+        if (activeServer == event.getServer()) {
+            activeServer = null;
+            appliedAdditions = Map.of();
+        }
+    }
+
+    /**
+     * For a new world, initialize the scoreboard after datapack load functions
+     * have created the objectives. PR #3 migration will replace global defaults
+     * here with the world's stored state for an existing save.
      */
     @SubscribeEvent
     public void onServerStarted(ServerStartedEvent event) {
-        if (!SkyvoidConfig.OPTIONAL.get("skyvoid_additions").get()) {
-            return;
+        activeServer = event.getServer();
+        appliedAdditions = Map.of();
+        if (SkyvoidConfig.OPTIONAL.get("skyvoid_additions").get()) {
+            applyAdditions(event.getServer(), snapshotAdditions());
         }
-        var server = event.getServer();
-        var commands = server.getCommands();
-        var source = server.createCommandSourceStack();
-        for (var entry : SkyvoidConfig.ADDITIONS.entrySet()) {
-            commands.performPrefixedCommand(
-                    source,
-                    "scoreboard players set " + entry.getKey()
-                            + " skyvoid_config " + (entry.getValue().get() ? "1" : "0")
-            );
-        }
-        commands.performPrefixedCommand(source, "function skyvoid_additions:technical/load");
     }
 }
