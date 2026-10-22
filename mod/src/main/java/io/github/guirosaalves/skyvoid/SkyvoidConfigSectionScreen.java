@@ -47,7 +47,7 @@ public final class SkyvoidConfigSectionScreen extends ConfigurationScreen.Config
         var button = Button.builder(
                 Component.translatable("neoforge.configuration.uitext.section",
                         Component.translatable("neoforge.configuration.uitext.sectiontext")),
-                clicked -> minecraft.setScreen(sectionCache.computeIfAbsent(key, k ->
+                clicked -> minecraft.gui.setScreen(sectionCache.computeIfAbsent(key, k ->
                         new SkyvoidConfigSectionScreen(
                                 context, this, values.valueMap(), key, section.entrySet(),
                                 Component.translatable(getTranslationKey(key))).rebuild())))
