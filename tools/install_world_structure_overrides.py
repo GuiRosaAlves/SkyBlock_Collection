@@ -28,7 +28,9 @@ def install(world: Path, packs: list[Path], config: dict,
         raise ValueError("Select the actual save folder containing level.dat")
     datapacks = world / "datapacks"
     destination = datapacks / PACK_NAME
-    backup = datapacks / (PACK_NAME + ".backup")
+    # Keep backups OUTSIDE datapacks: Minecraft must not discover them as
+    # additional active packs.
+    backup = world / ".skyvoid-backups" / PACK_NAME
     if destination.exists() and not replace:
         raise FileExistsError(f"{destination} already exists; use --replace to back it up")
     if replace and backup.exists():
@@ -43,6 +45,7 @@ def install(world: Path, packs: list[Path], config: dict,
             raise ValueError("Configuration produced no structure overrides; world unchanged")
         datapacks.mkdir(parents=True, exist_ok=True)
         if destination.exists():
+            backup.parent.mkdir(parents=True, exist_ok=True)
             destination.rename(backup)
         try:
             # Same filesystem is not guaranteed, so copy first to a hidden

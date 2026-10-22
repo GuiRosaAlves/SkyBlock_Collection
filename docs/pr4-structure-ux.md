@@ -77,9 +77,8 @@ save**. It never rewrites `level.dat` or existing user datapacks.
 
 If that generated folder already exists, the installer refuses changes unless
 you pass `--replace`. Replacement preserves the old generated folder as
-`skyvoid_structure_overrides.backup` and refuses to overwrite an existing
-backup. Keep the backup **outside** `datapacks` after inspection, because
-Minecraft may recognize it as a separate datapack.
+`.skyvoid-backups/skyvoid_structure_overrides`, outside the `datapacks`
+directory, and refuses to overwrite an existing backup.
 
 On next world startup, ensure the generated
 `file/skyvoid_structure_overrides` datapack is enabled and ordered above

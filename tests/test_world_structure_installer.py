@@ -40,7 +40,7 @@ class WorldStructureInstallerTests(unittest.TestCase):
             install(self.world, [self.pack], self.controls)
         install(self.world, [self.pack], {"structure_sets": {
             "skyvoid_biome_islands:biome_islands": {"density": "very_rare"}}}, replace=True)
-        self.assertTrue((destination.parent / (PACK_NAME + ".backup")).exists())
+        self.assertTrue((self.world / ".skyvoid-backups" / PACK_NAME).exists())
         with self.assertRaises(FileExistsError):
             install(self.world, [self.pack], self.controls, replace=True)
 
