@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/neoforge-26-2-integration-plan
+      - feature/live-config-world-migration
   push:
     branches:
       - main
@@ -48,6 +49,18 @@ jobs:
       - name: Assemble standalone datapacks and NeoForge JAR
         working-directory: mod
         run: gradle build --no-daemon --stacktrace
+      - name: Validate structure override using real Beet output
+        run: |
+          python tools/structure_overrides.py \
+            --pack mod/build/generated/skyvoid-packs/data/skyvoid/datapacks/skyvoid_biome_islands \
+            --config docs/examples/structure-rarity-example.json \
+            --output "$RUNNER_TEMP/skyvoid-structure-overrides"
+          python -c 'import json,os,pathlib; p=pathlib.Path(os.environ["RUNNER_TEMP"])/"skyvoid-structure-overrides/data/skyvoid_biome_islands/worldgen/structure_set/biome_islands.json"; d=json.loads(p.read_text()); assert d["placement"]["spacing"]==30; assert len(d["structures"])==19'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skyvoid-example-structure-overlay
+          path: ${{ runner.temp }}/skyvoid-structure-overrides/
+          if-no-files-found: error
       - name: Upload standalone SkyVoid Additions datapack for testing
         uses: actions/upload-artifact@v4
         with:
@@ -120,6 +133,23 @@ jobs:
             exit 1
           }
           echo 'eula=true' > eula.txt
+      - name: Configure biome island structure overrides for production test
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/skyvoid-prod-server/config"
+          cat > "$RUNNER_TEMP/skyvoid-prod-server/config/skyvoid-common.toml" <<'TOML'
+          [optional_packs]
+          skyvoid_biome_islands = true
+
+          [structures.biome_islands]
+          density = "rare"
+
+          [structures.biome_islands.badlands]
+          enabled = false
+
+          [structures.biome_islands.desert]
+          weight = 4
+          TOML
       - name: Smoke test packaged JAR in production
         run: |
           set +e
@@ -137,6 +167,29 @@ jobs:
             echo "Production server did not reach ready state (exit $status)." >&2
             exit 1
           fi
+      - name: Verify mod-generated structure overlay in production
+        run: |
+          set -euo pipefail
+          if ! grep -q 'Registered SkyVoid structure override pack' "$RUNNER_TEMP/skyvoid-prod-server.log"; then
+            echo 'SkyVoid did not register the customized structure datapack.' >&2
+            exit 1
+          fi
+          generated=$(find "$RUNNER_TEMP/skyvoid-prod-server/config/skyvoid/structure-overrides" \
+            -path '*/data/skyvoid_biome_islands/worldgen/structure_set/biome_islands.json' \
+            -type f -print -quit)
+          if [ -z "$generated" ]; then
+            echo 'Generated structure override JSON was not found.' >&2
+            exit 1
+          fi
+          python - "$generated" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding='utf-8') as stream:
+              data = json.load(stream)
+          assert data["placement"]["spacing"] == 30, data["placement"]
+          names = {entry["structure"]: entry["weight"] for entry in data["structures"]}
+          assert "skyvoid_biome_islands:badlands" not in names, names
+          assert names["skyvoid_biome_islands:desert"] == 4, names
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:

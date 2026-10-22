@@ -14,6 +14,13 @@ import shutil
 from pathlib import Path
 from zipfile import ZipFile
 
+# The staging task executes this file directly, while unittest imports it as
+# tools.prepare_neoforge_resources. Both entrypoints must resolve the helper.
+if __package__:
+    from .structure_overrides import structure_catalog
+else:
+    from structure_overrides import structure_catalog
+
 WORLDGEN = {
     "skyvoid_worldgen",
     "skyvoid_worldgen_empty",
@@ -77,6 +84,206 @@ def addition_defaults(source: Path) -> dict[str, bool]:
     if not defaults:
         raise ValueError("No SkyVoid Additions default values could be extracted")
     return defaults
+
+
+MENU_SOURCE = Path(
+    "src/packs/extras/skyvoid_additions/data/skyvoid_additions/"
+    "function/customize/update_config/open_menu.mcfunction"
+)
+
+
+def additions_descriptions(source: Path = MENU_SOURCE) -> dict[str, dict[str, str]]:
+    """Read the original datapack's human-authored config-menu catalog.
+
+    The open_menu file uses Mecha nesting: its all_settings literal is valid
+    JSON, so we extract and decode it rather than duplicating labels manually.
+    """
+    if not source.is_file():
+        return {}
+    contents = source.read_text(encoding="utf-8")
+    match = re.search(r"(?ms)^all_settings = (\[.*?^\])\s*page_size", contents)
+    if match is None:
+        raise ValueError("Unable to find Additions menu setting catalog")
+    data = json.loads(match.group(1))
+    result = {}
+    for item in data:
+        key = item["id"]
+        if key in result:
+            raise ValueError(f"Duplicate Additions menu setting: {key}")
+        result[key] = {"name": item["name"], "description": item["desc"].replace("**", "")}
+    return result
+
+
+def config_translations(catalog: list[dict], additions: dict[str, bool],
+                        metadata: dict[str, dict[str, str]],
+                        structures_by_pack: dict | None = None) -> tuple[dict, dict]:
+    """Return English text and Portuguese UI translations with safe fallbacks."""
+    en = {
+        "skyvoid.configuration.title": "SkyVoid Configuration",
+        "skyvoid.configuration.new_world": "New World Defaults",
+        "skyvoid.configuration.new_world.button": "Choose...",
+        "skyvoid.configuration.new_world.tooltip":
+            "Defaults for newly created worlds only. Existing worlds keep their saved generation.",
+        "skyvoid.configuration.optional_packs": "Optional Datapacks",
+        "skyvoid.configuration.optional_packs.tooltip":
+            "Pack selection is resolved before world generation; existing worlds are not modified live.",
+        "skyvoid.configuration.additions": "Gameplay Additions",
+        "skyvoid.configuration.additions.tooltip":
+            "Configure SkyVoid Additions gameplay mechanics. In singleplayer, changes to active mechanics apply when saved.",
+        "skyvoid.configuration.structures": "Structure Generation",
+        "skyvoid.ui.browse_additions": "Browse Settings...",
+        "skyvoid.ui.additions_browser": "SkyVoid Additions — Browse Settings",
+        "skyvoid.ui.search": "Search by name or setting ID",
+        "skyvoid.ui.category.all": "All Mechanics",
+        "skyvoid.ui.category.trades": "Trading & Gifts",
+        "skyvoid.ui.category.mobs": "Mob Mechanics",
+        "skyvoid.ui.category.resources": "Resources & Crafting",
+        "skyvoid.ui.category.world": "World & Portals",
+        "skyvoid.config.new_world.worldgen": "World Generation Profile",
+        "skyvoid.config.new_world.worldgen.tooltip":
+            "Choose the world generation used for future worlds. Changing this value will not convert an existing save.",
+        "skyvoid.config.new_world.island": "Starting Island",
+        "skyvoid.config.new_world.island.tooltip":
+            "Choose the starter island for future worlds. Existing islands are never regenerated.",
+    }
+    pt = {
+        "skyvoid.configuration.title": "Configuração SkyVoid",
+        "skyvoid.configuration.new_world": "Padrões para Novos Mundos",
+        "skyvoid.configuration.new_world.button": "Selecionar...",
+        "skyvoid.configuration.new_world.tooltip":
+            "Padrões apenas para mundos novos. Mundos existentes preservam sua geração.",
+        "skyvoid.configuration.optional_packs": "Datapacks Opcionais",
+        "skyvoid.configuration.optional_packs.tooltip":
+            "A seleção de datapacks é feita antes de carregar o mundo; mundos existentes não são alterados imediatamente.",
+        "skyvoid.configuration.additions": "Mecânicas Adicionais",
+        "skyvoid.configuration.additions.tooltip":
+            "Configure as mecânicas de SkyVoid Additions. Em um mundo local, as alterações podem ser aplicadas ao salvar.",
+        "skyvoid.configuration.structures": "Geração de Estruturas",
+        "skyvoid.ui.browse_additions": "Explorar Configurações...",
+        "skyvoid.ui.additions_browser": "SkyVoid Additions — Explorar Configurações",
+        "skyvoid.ui.search": "Buscar por nome ou identificador",
+        "skyvoid.ui.category.all": "Todas as Mecânicas",
+        "skyvoid.ui.category.trades": "Trocas e Presentes",
+        "skyvoid.ui.category.mobs": "Mecânicas de Criaturas",
+        "skyvoid.ui.category.resources": "Recursos e Fabricação",
+        "skyvoid.ui.category.world": "Mundo e Portais",
+        "skyvoid.config.new_world.worldgen": "Geração de Mundo",
+        "skyvoid.config.new_world.worldgen.tooltip":
+            "Selecione a geração para futuros mundos. Isso não converte mundos existentes.",
+        "skyvoid.config.new_world.island": "Ilha Inicial",
+        "skyvoid.config.new_world.island.tooltip":
+            "Selecione a ilha inicial para novos mundos. Ilhas existentes não são regeneradas.",
+    }
+    # The values stored in skyvoid-common.toml stay unchanged; these keys
+    # provide readable labels for the cycle-button selector only.
+    worldgen_labels = {
+        "skyvoid_worldgen": "SkyVoid (Default)",
+        "skyvoid_worldgen_empty": "Completely Empty",
+        "skyvoid_worldgen_full_lava": "Full Lava",
+        "skyvoid_worldgen_normal_end": "Normal End",
+        "skyvoid_worldgen_noxiousvex": "NoxiousVex Variant",
+        "skyvoid_worldgen_pinu": "Pinu Variant",
+        "skyvoid_worldgen_portal_room": "Portal Room",
+        "skyvoid_worldgen_single_lava": "Single Lava",
+        "skyvoid_worldgen_structures": "Void with Structures",
+    }
+    island_labels = {
+        "skyvoid_island_standard": "Standard Skyblock",
+        "skyvoid_island_only_dirt": "Dirt Only",
+        "skyvoid_island_oneblock": "OneBlock",
+    }
+    for key, name in worldgen_labels.items():
+        en["skyvoid.select.worldgen." + key] = name
+    for key, name in island_labels.items():
+        en["skyvoid.select.island." + key] = name
+    for item in catalog:
+        if item["group"] != "optional":
+            continue
+        pack_id = item["id"]
+        key = "skyvoid.config.optional_packs." + pack_id
+        display_name = pack_id.removeprefix("skyvoid_").replace("_", " ").title()
+        en[key] = display_name
+        en[key + ".tooltip"] = ("Include " + display_name + " for newly created worlds. "
+                                "Existing-world pack selection requires a world reload.")
+    for key in additions:
+        text = metadata.get(key, {})
+        translation_key = "skyvoid.config.additions." + key
+        en[translation_key] = text.get("name", key.replace("_", " ").title())
+        description = text.get("description",
+                               key.replace("_", " ") + " gameplay mechanic.")
+        en[translation_key + ".tooltip"] = (description + "\n"
+            "Applied to the active world's SkyVoid Additions scoreboard when saved.")
+    # Structure labels and count come from the same built-in JSON catalog
+    # consumed by SkyvoidConfig, so the UI cannot expose nonexistent islands.
+    en["skyvoid.configuration.structures"] = "Structure Generation"
+    en["skyvoid.configuration.structures.tooltip"] = (
+        "Controls are applied during world loading and affect newly generated chunks only."
+    )
+    en["skyvoid.configuration.structures.biome_islands"] = "Biome Island Structures"
+    en["skyvoid.configuration.structures.biome_islands.tooltip"] = (
+        "Requires Optional Datapacks > Biome Islands. Density changes the "
+        "distance between placement attempts. Structure weights adjust relative rarity."
+    )
+    pt["skyvoid.configuration.structures.tooltip"] = (
+        "As alterações são aplicadas ao carregar o mundo e afetam somente chunks novos."
+    )
+    pt["skyvoid.configuration.structures.biome_islands"] = "Estruturas das Ilhas de Bioma"
+    pt["skyvoid.configuration.structures.biome_islands.tooltip"] = (
+        "Requer o datapack opcional Ilhas de Bioma. A densidade altera o espaçamento "
+        "entre tentativas; o peso altera a chance relativa de cada ilha."
+    )
+    density_labels = {
+        "very_rare": ("Very Rare", "Muito Rara"),
+        "rare": ("Rare", "Rara"),
+        "normal": ("Normal (Original)", "Normal (Original)"),
+        "common": ("Common", "Comum"),
+        "very_common": ("Very Common", "Muito Comum"),
+    }
+    en["skyvoid.config.structures.biome_islands.density"] = "Overall Density"
+    pt["skyvoid.config.structures.biome_islands.density"] = "Densidade Geral"
+    en["skyvoid.config.structures.biome_islands.density.tooltip"] = (
+        "Very Rare doubles spacing; Rare increases it 50%; Common decreases "
+        "it 25%; Very Common halves it (respecting Minecraft's minimum separation). "
+        "Requires reopening the world; existing structures are unchanged."
+    )
+    pt["skyvoid.config.structures.biome_islands.density.tooltip"] = (
+        "Controla o espaçamento das ilhas. Reabra o mundo para aplicar. "
+        "Estruturas já geradas não são alteradas."
+    )
+    for value, (english, portuguese) in density_labels.items():
+        en["skyvoid.select.density." + value] = english
+        pt["skyvoid.select.density." + value] = portuguese
+    biome_sets = (structures_by_pack or {}).get("skyvoid_biome_islands", {})
+    biome_set = biome_sets.get("skyvoid_biome_islands:biome_islands", {})
+    for structure_id in biome_set.get("structures", {}):
+        namespace, short_name = structure_id.split(":", 1)
+        if namespace != "skyvoid_biome_islands":
+            raise ValueError("Unexpected biome island structure: " + structure_id)
+        label = short_name.replace("_", " ").title()
+        group = "skyvoid.configuration.structures.biome_islands." + short_name
+        prefix = "skyvoid.config.structures.biome_islands." + short_name
+        en[group] = label + " Island"
+        pt[group] = "Ilha de " + label
+        en[prefix + ".enabled"] = "Generate This Island"
+        pt[prefix + ".enabled"] = "Gerar Esta Ilha"
+        en[prefix + ".enabled.tooltip"] = (
+            "Include this island when choosing a biome island in newly generated chunks. "
+            "Reopen the world to apply."
+        )
+        pt[prefix + ".enabled.tooltip"] = (
+            "Permite esta ilha em chunks novos. Reabra o mundo para aplicar."
+        )
+        en[prefix + ".weight"] = "Relative Rarity Weight"
+        pt[prefix + ".weight"] = "Peso Relativo"
+        en[prefix + ".weight.tooltip"] = (
+            "Higher weights increase the chance of choosing this island relative "
+            "to other enabled islands, not the overall generation frequency."
+        )
+        pt[prefix + ".weight.tooltip"] = (
+            "Um peso maior torna esta ilha mais provável em relação às outras "
+            "ilhas ativadas, sem alterar a frequência total."
+        )
+    return en, pt
 
 
 def stage_pack(archive: Path, destination: Path) -> str:
@@ -155,26 +362,31 @@ def build_catalog(build_dir: Path, output_dir: Path, source_file: Path) -> dict:
     (settings_dir / "additions-defaults.json").write_text(
         json.dumps(additions, indent=2) + "\n", encoding="utf-8"
     )
-    # Name and describe each setting in NeoForge's built-in config screen.
-    translations = {
-        "skyvoid.config.new_world.worldgen": "World Generation Profile",
-        "skyvoid.config.new_world.island": "Starting Island",
-    }
+    # Each profile owns its own registry entries. Do not flatten all variants
+    # into one manifest; different worldgen choices can share the same
+    # registry identifier with intentionally different definitions.
+    structures_by_pack = {}
     for item in catalog:
-        if item["group"] == "optional":
-            pack_id = item["id"]
-            translations["skyvoid.config.optional_packs." + pack_id] = (
-                pack_id.removeprefix("skyvoid_").replace("_", " ").title()
-            )
-    for setting in additions:
-        translations["skyvoid.config.additions." + setting] = (
-            setting.replace("_", " ").title()
-        )
+        if item["group"] == "resource":
+            continue
+        pack_path = output_dir / "data" / "skyvoid" / "datapacks" / item["id"]
+        entries = structure_catalog([pack_path])
+        if entries:
+            structures_by_pack[item["id"]] = entries
+    (settings_dir / "structure-catalog.json").write_text(
+        json.dumps(structures_by_pack, indent=2) + "\n", encoding="utf-8"
+    )
+    # Use the authors' original mechanic names/descriptions instead of
+    # technical config ids. Missing menu items receive a readable fallback.
+    menu_metadata = additions_descriptions()
+    en, pt = config_translations(catalog, additions, menu_metadata, structures_by_pack)
     language_dir = output_dir / "assets" / "skyvoid" / "lang"
     language_dir.mkdir(parents=True, exist_ok=True)
-    (language_dir / "en_us.json").write_text(
-        json.dumps(translations, indent=2) + "\n", encoding="utf-8"
-    )
+    for locale, translations in (("en_us", en), ("pt_br", pt)):
+        (language_dir / (locale + ".json")).write_text(
+            json.dumps(translations, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8"
+        )
     return {"packs": len(catalog), "addition_settings": len(additions)}
 
 

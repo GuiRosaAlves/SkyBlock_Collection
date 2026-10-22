@@ -50,6 +50,13 @@ public final class SkyvoidConfig {
             "skyvoid_compat_terralith"
     );
 
+    public static final List<String> BIOME_ISLAND_DENSITIES = List.of(
+            "very_rare", "rare", "normal", "common", "very_common"
+    );
+    public static final ModConfigSpec.ConfigValue<String> BIOME_ISLAND_DENSITY;
+    public static final Map<String, ModConfigSpec.BooleanValue> BIOME_ISLAND_ENABLED;
+    public static final Map<String, ModConfigSpec.IntValue> BIOME_ISLAND_WEIGHTS;
+
     public static final ModConfigSpec SPEC;
     public static final ModConfigSpec.ConfigValue<String> WORLDGEN;
     public static final ModConfigSpec.ConfigValue<String> ISLAND;
@@ -107,6 +114,46 @@ public final class SkyvoidConfig {
         builder.pop();
         ADDITIONS = Map.copyOf(additions);
 
+        // Structure controls are intentionally limited to real supported
+        // random-spread structure sets. Strongholds and starter-island markers
+        // are excluded because changing them can break world progression.
+        builder.comment("Structure generation is resolved before world load.",
+                "Only newly generated chunks will use changed placement rules.")
+                .translation("skyvoid.configuration.structures")
+                .push("structures");
+        builder.comment("Biome Island structures (requires Optional Datapacks > Biome Islands).")
+                .translation("skyvoid.configuration.structures.biome_islands")
+                .push("biome_islands");
+        BIOME_ISLAND_DENSITY = builder
+                .comment("Overall frequency of biome islands. Normal preserves the datapack default.",
+                        "Requires Optional Datapacks > Biome Islands to be enabled.")
+                .translation("skyvoid.config.structures.biome_islands.density")
+                .worldRestart()
+                .defineInList("density", "normal", new ArrayList<>(BIOME_ISLAND_DENSITIES));
+
+        Map<String, ModConfigSpec.BooleanValue> enabled = new LinkedHashMap<>();
+        Map<String, ModConfigSpec.IntValue> weights = new LinkedHashMap<>();
+        for (var entry : readBiomeIslandWeights().entrySet()) {
+            String id = entry.getKey();
+            builder.translation("skyvoid.configuration.structures.biome_islands." + id)
+                    .push(id);
+            enabled.put(id, builder
+                    .comment("Allow this biome island to generate in newly explored chunks.")
+                    .translation("skyvoid.config.structures.biome_islands." + id + ".enabled")
+                    .worldRestart()
+                    .define("enabled", true));
+            weights.put(id, builder
+                    .comment("Relative selection weight (1 to 1000).",
+                             "Weights do not change overall structure placement frequency.")
+                    .translation("skyvoid.config.structures.biome_islands." + id + ".weight")
+                    .worldRestart()
+                    .defineInRange("weight", entry.getValue(), 1, 1000));
+            builder.pop();
+        }
+        BIOME_ISLAND_ENABLED = Map.copyOf(enabled);
+        BIOME_ISLAND_WEIGHTS = Map.copyOf(weights);
+        builder.pop(2);
+
         SPEC = builder.build();
     }
 
@@ -131,4 +178,33 @@ public final class SkyvoidConfig {
             throw new IllegalStateException("Cannot read SkyVoid Additions defaults.", e);
         }
     }
+    private static Map<String, Integer> readBiomeIslandWeights() {
+        String path = "/assets/skyvoid/config/structure-catalog.json";
+        try (InputStream input = SkyvoidConfig.class.getResourceAsStream(path)) {
+            if (input == null) {
+                throw new IllegalStateException("Missing generated structure catalog: " + path);
+            }
+            JsonObject root = JsonParser.parseReader(
+                    new InputStreamReader(input, StandardCharsets.UTF_8)).getAsJsonObject();
+            JsonObject set = root.getAsJsonObject("skyvoid_biome_islands")
+                    .getAsJsonObject("skyvoid_biome_islands:biome_islands");
+            JsonObject source = set.getAsJsonObject("structures");
+            Map<String, Integer> ids = new LinkedHashMap<>();
+            for (var entry : source.entrySet()) {
+                String fullId = entry.getKey();
+                if (!fullId.startsWith("skyvoid_biome_islands:")) {
+                    throw new IllegalStateException("Unsupported biome island id: " + fullId);
+                }
+                ids.put(fullId.substring("skyvoid_biome_islands:".length()),
+                        entry.getValue().getAsInt());
+            }
+            if (ids.isEmpty()) {
+                throw new IllegalStateException("Biome island structure catalog is empty");
+            }
+            return ids;
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot read generated structure catalog", e);
+        }
+    }
+
 }
