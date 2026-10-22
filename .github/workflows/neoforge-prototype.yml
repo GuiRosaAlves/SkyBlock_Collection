@@ -6,6 +6,7 @@ on:
       - main
       - feature/neoforge-26-2-integration-plan
       - feature/live-config-world-migration
+      - feature/structure-controls-config-ux
   push:
     branches:
       - main
