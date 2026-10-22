@@ -1,6 +1,6 @@
 package io.github.guirosaalves.skyvoid.mixin;
 
-import io.github.guirosaalves.skyvoid.SkyvoidConfig;
+import io.github.guirosaalves.skyvoid.SkyvoidVoidStructureRuntime;
 import io.github.guirosaalves.skyvoid.SkyvoidVoidStructureSelector;
 import net.minecraft.core.QuartPos;
 import net.minecraft.core.RegistryAccess;
@@ -52,15 +52,16 @@ public abstract class SkyvoidChunkGeneratorMixin {
             long seed, ChunkAccess centerChunk, ChunkPos sourceChunkPos,
             SectionPos sectionPos, ResourceKey<Level> dimension,
             CallbackInfoReturnable<Boolean> cir) {
+        var settings = SkyvoidVoidStructureRuntime.current();
         if (skyvoid$nativeAttempt.get()
-                || !SkyvoidConfig.VOID_STRUCTURE_REPLACEMENT_ENABLED.get()
-                || !"skyvoid_worldgen_structures".equals(SkyvoidConfig.WORLDGEN.get())) return;
+                || !settings.enabled()
+                || !"skyvoid_worldgen_structures".equals(settings.worldgen())) return;
 
         String originId = selected.structure().unwrapKey().orElseThrow().identifier().toString();
         // Do not move progression-critical stronghold starts.
         if (originId.endsWith(":stronghold") || originId.endsWith(":strongholds")) return;
 
-        Map<String, Integer> weights = SkyvoidConfig.voidStructureWeightOverrides();
+        Map<String, Integer> weights = settings.weights();
         var possibleBiomes = ((ChunkGenerator) (Object)this).getBiomeSource().possibleBiomes();
         var registry = registryAccess.lookupOrThrow(Registries.STRUCTURE);
         Map<String, net.minecraft.core.Holder<Structure>> holders = new HashMap<>();

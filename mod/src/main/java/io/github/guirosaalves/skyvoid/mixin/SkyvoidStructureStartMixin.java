@@ -1,6 +1,6 @@
 package io.github.guirosaalves.skyvoid.mixin;
 
-import io.github.guirosaalves.skyvoid.SkyvoidConfig;
+import io.github.guirosaalves.skyvoid.SkyvoidVoidStructureRuntime;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.StructureManager;
@@ -22,11 +22,12 @@ public abstract class SkyvoidStructureStartMixin {
             WorldGenLevel level, StructureManager structureManager,
             ChunkGenerator generator, RandomSource random, BoundingBox bounds,
             ChunkPos sourcePos, CallbackInfo ci) {
-        if (!SkyvoidConfig.VOID_STRUCTURE_REPLACEMENT_ENABLED.get()
-                || !"skyvoid_worldgen_structures".equals(SkyvoidConfig.WORLDGEN.get())) return;
+        var settings = SkyvoidVoidStructureRuntime.current();
+        if (!settings.enabled()
+                || !"skyvoid_worldgen_structures".equals(settings.worldgen())) return;
         var registry = level.registryAccess().lookupOrThrow(Registries.STRUCTURE);
         var id = registry.getKey(((StructureStart)(Object)this).getStructure());
-        if (id != null && SkyvoidConfig.voidStructureWeightOverrides()
+        if (id != null && settings.weights()
                 .getOrDefault(id.toString(), 1) == 0) ci.cancel();
     }
 }

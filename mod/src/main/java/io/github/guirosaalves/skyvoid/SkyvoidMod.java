@@ -146,6 +146,7 @@ public final class SkyvoidMod {
         if (activeServer == event.getServer()) {
             activeServer = null;
             appliedAdditions = Map.of();
+            SkyvoidVoidStructureRuntime.deactivate();
         }
     }
 
@@ -158,6 +159,9 @@ public final class SkyvoidMod {
     public void onServerStarted(ServerStartedEvent event) {
         activeServer = event.getServer();
         appliedAdditions = Map.of();
+        // This world profile is authoritative for weighted structure rules
+        // once the server finishes loading. Other worlds keep their own map.
+        SkyvoidVoidStructureRuntime.activate(SkyvoidWorldProfile.forServer(event.getServer()));
         if (SkyvoidConfig.OPTIONAL.get("skyvoid_additions").get()) {
             // An imported/initialized world keeps its own values across reloads
             // even when global COMMON defaults have changed.
