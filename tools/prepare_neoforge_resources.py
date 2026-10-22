@@ -14,7 +14,12 @@ import shutil
 from pathlib import Path
 from zipfile import ZipFile
 
-from tools.structure_overrides import structure_catalog
+# The staging task executes this file directly, while unittest imports it as
+# tools.prepare_neoforge_resources. Both entrypoints must resolve the helper.
+if __package__:
+    from .structure_overrides import structure_catalog
+else:
+    from structure_overrides import structure_catalog
 
 WORLDGEN = {
     "skyvoid_worldgen",
