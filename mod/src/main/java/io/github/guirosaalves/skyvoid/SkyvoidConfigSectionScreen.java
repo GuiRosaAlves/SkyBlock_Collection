@@ -30,10 +30,22 @@ public final class SkyvoidConfigSectionScreen extends ConfigurationScreen.Config
         super(parent, type, config, title);
     }
 
+    private final String additionCategory;
+    private final String additionQuery;
+
     private SkyvoidConfigSectionScreen(Context parentContext, Screen parent,
                                        Map<String, Object> valueSpecs, String key,
                                        Set<? extends Entry> entries, Component title) {
+        this(parentContext, parent, valueSpecs, key, entries, title, null, "");
+    }
+
+    SkyvoidConfigSectionScreen(Context parentContext, Screen parent,
+                               Map<String, Object> valueSpecs, String key,
+                               Set<? extends Entry> entries, Component title,
+                               String additionCategory, String additionQuery) {
         super(parentContext, parent, valueSpecs, key, entries, title);
+        this.additionCategory = additionCategory;
+        this.additionQuery = additionQuery == null ? "" : additionQuery;
     }
 
     @Override
@@ -44,6 +56,16 @@ public final class SkyvoidConfigSectionScreen extends ConfigurationScreen.Config
         }
         var name = getTranslationComponent(key);
         var tooltip = getTooltipComponent(key, null);
+        if ("additions".equals(key) && context.keylist().isEmpty()) {
+            var launch = Button.builder(
+                    Component.translatable("skyvoid.ui.browse_additions"),
+                    clicked -> minecraft.gui.setScreen(new SkyvoidAdditionsBrowser(
+                            this, context, values.valueMap(), key, section.entrySet())))
+                    .width(Button.DEFAULT_WIDTH)
+                    .tooltip(Tooltip.create(tooltip))
+                    .build();
+            return new Element(name, tooltip, launch, false);
+        }
         var button = Button.builder(
                 Component.translatable("neoforge.configuration.uitext.section",
                         Component.translatable("neoforge.configuration.uitext.sectiontext")),
@@ -57,6 +79,17 @@ public final class SkyvoidConfigSectionScreen extends ConfigurationScreen.Config
         return new Element(
                 Component.translatable("neoforge.configuration.uitext.section", name),
                 tooltip, button, false);
+    }
+
+    @Override
+    protected Element createBooleanValue(String key,
+                                         net.neoforged.neoforge.common.ModConfigSpec.ValueSpec spec,
+                                         Supplier<Boolean> source, Consumer<Boolean> target) {
+        if (additionCategory != null && !SkyvoidAdditionsBrowser.matches(
+                key, additionCategory, additionQuery)) {
+            return null;
+        }
+        return super.createBooleanValue(key, spec, source, target);
     }
 
     @Override
