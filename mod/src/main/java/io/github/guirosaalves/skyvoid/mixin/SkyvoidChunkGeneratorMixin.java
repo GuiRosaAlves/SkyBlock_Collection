@@ -56,7 +56,7 @@ public abstract class SkyvoidChunkGeneratorMixin {
                 || !SkyvoidConfig.VOID_STRUCTURE_REPLACEMENT_ENABLED.get()
                 || !"skyvoid_worldgen_structures".equals(SkyvoidConfig.WORLDGEN.get())) return;
 
-        String originId = selected.structure().key().identifier().toString();
+        String originId = selected.structure().unwrapKey().orElseThrow().identifier().toString();
         // Do not move progression-critical stronghold starts.
         if (originId.endsWith(":stronghold") || originId.endsWith(":strongholds")) return;
 
