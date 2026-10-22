@@ -1,0 +1,15 @@
+{
+  "structure_sets": {
+    "skyvoid_biome_islands:biome_islands": {
+      "density": "rare",
+      "structures": {
+        "skyvoid_biome_islands:badlands": {
+          "enabled": false
+        },
+        "skyvoid_biome_islands:desert": {
+          "weight": 4
+        }
+      }
+    }
+  }
+}

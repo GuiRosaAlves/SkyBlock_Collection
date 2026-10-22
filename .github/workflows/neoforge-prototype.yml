@@ -49,6 +49,18 @@ jobs:
       - name: Assemble standalone datapacks and NeoForge JAR
         working-directory: mod
         run: gradle build --no-daemon --stacktrace
+      - name: Validate structure override using real Beet output
+        run: |
+          python tools/structure_overrides.py \
+            --pack mod/build/generated/skyvoid-packs/data/skyvoid/datapacks/skyvoid_biome_islands \
+            --config docs/examples/structure-rarity-example.json \
+            --output "$RUNNER_TEMP/skyvoid-structure-overrides"
+          python -c 'import json,os,pathlib; p=pathlib.Path(os.environ["RUNNER_TEMP"])/"skyvoid-structure-overrides/data/skyvoid_biome_islands/worldgen/structure_set/biome_islands.json"; d=json.loads(p.read_text()); assert d["placement"]["spacing"]==30; assert len(d["structures"])==19'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skyvoid-example-structure-overlay
+          path: ${{ runner.temp }}/skyvoid-structure-overrides/
+          if-no-files-found: error
       - name: Upload standalone SkyVoid Additions datapack for testing
         uses: actions/upload-artifact@v4
         with:
