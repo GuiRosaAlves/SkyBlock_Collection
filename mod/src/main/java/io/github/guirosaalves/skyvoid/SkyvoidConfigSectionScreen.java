@@ -28,6 +28,8 @@ public final class SkyvoidConfigSectionScreen extends ConfigurationScreen.Config
     public SkyvoidConfigSectionScreen(Screen parent, ModConfig.Type type,
                                       ModConfig config, Component title) {
         super(parent, type, config, title);
+        this.additionCategory = null;
+        this.additionQuery = "";
     }
 
     private final String additionCategory;
