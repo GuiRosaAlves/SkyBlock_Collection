@@ -84,6 +84,16 @@ public final class SkyvoidConfigSectionScreen extends ConfigurationScreen.Config
     }
 
     @Override
+    protected void createResetButton() {
+        // NeoForge's section-level Reset iterates all entries, even entries
+        // hidden by our search/category filter. Disable that destructive
+        // global action here; the unfiltered sections retain normal Reset.
+        if (additionCategory == null) {
+            super.createResetButton();
+        }
+    }
+
+    @Override
     protected Element createBooleanValue(String key,
                                          net.neoforged.neoforge.common.ModConfigSpec.ValueSpec spec,
                                          Supplier<Boolean> source, Consumer<Boolean> target) {
