@@ -19,7 +19,7 @@ import java.util.Objects;
  * before dynamic registries are loaded; SavedData is not available that early.
  */
 public final class SkyvoidWorldProfile extends SavedData {
-    public static final int CURRENT_VERSION = 2;
+    public static final int CURRENT_VERSION = 3;
 
     public static final Codec<SkyvoidWorldProfile> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.INT.optionalFieldOf("schema_version", CURRENT_VERSION).forGetter(p -> p.schemaVersion),
@@ -30,7 +30,9 @@ public final class SkyvoidWorldProfile extends SavedData {
             Codec.unboundedMap(Codec.STRING, Codec.BOOL).optionalFieldOf("additions", Map.of()).forGetter(p -> p.additions),
             Codec.BOOL.optionalFieldOf("migration_complete", false).forGetter(p -> p.migrationComplete),
             Codec.unboundedMap(Codec.STRING, SkyvoidStructureSetRule.CODEC)
-                    .optionalFieldOf("structure_sets", Map.of()).forGetter(p -> p.structureSets)
+                    .optionalFieldOf("structure_sets", Map.of()).forGetter(p -> p.structureSets),
+            Codec.unboundedMap(Codec.STRING, Codec.intRange(0, 1000))
+                    .optionalFieldOf("void_structure_weights", Map.of()).forGetter(p -> p.voidStructureWeights)
     ).apply(instance, SkyvoidWorldProfile::new));
 
     public static final SavedDataType<SkyvoidWorldProfile> TYPE = new SavedDataType<>(
@@ -47,15 +49,17 @@ public final class SkyvoidWorldProfile extends SavedData {
     private Map<String, Boolean> additions;
     private boolean migrationComplete;
     private Map<String, SkyvoidStructureSetRule> structureSets;
+    private Map<String, Integer> voidStructureWeights;
 
     public SkyvoidWorldProfile() {
-        this(CURRENT_VERSION, "uninitialized", "", "", Map.of(), Map.of(), false, Map.of());
+        this(CURRENT_VERSION, "uninitialized", "", "", Map.of(), Map.of(), false, Map.of(), Map.of());
     }
 
     private SkyvoidWorldProfile(int schemaVersion, String origin, String worldgen, String island,
                                 Map<String, Boolean> optionalPacks, Map<String, Boolean> additions,
                                 boolean migrationComplete,
-                                Map<String, SkyvoidStructureSetRule> structureSets) {
+                                Map<String, SkyvoidStructureSetRule> structureSets,
+                                Map<String, Integer> voidStructureWeights) {
         this.schemaVersion = schemaVersion;
         this.origin = Objects.requireNonNull(origin);
         this.worldgen = Objects.requireNonNull(worldgen);
@@ -64,6 +68,7 @@ public final class SkyvoidWorldProfile extends SavedData {
         this.additions = Map.copyOf(additions);
         this.migrationComplete = migrationComplete;
         this.structureSets = Map.copyOf(structureSets);
+        this.voidStructureWeights = Map.copyOf(voidStructureWeights);
     }
 
     /** Call on the logical server thread only. */
@@ -82,6 +87,7 @@ public final class SkyvoidWorldProfile extends SavedData {
     public Map<String, Boolean> additions() { return additions; }
     public boolean migrationComplete() { return migrationComplete; }
     public Map<String, SkyvoidStructureSetRule> structureSets() { return structureSets; }
+    public Map<String, Integer> voidStructureWeights() { return voidStructureWeights; }
 
     /**
      * Only migration/bootstrap may initialize a world. This is deliberately
@@ -132,6 +138,31 @@ public final class SkyvoidWorldProfile extends SavedData {
         Map<String, SkyvoidStructureSetRule> snapshot = Map.copyOf(rules);
         if (!structureSets.equals(snapshot)) {
             structureSets = snapshot;
+            setDirty();
+        }
+    }
+
+    /**
+     * The Void with Structures profile uses a separate structure-ID namespace
+     * and numeric weights: zero disables; 1 is the default. An absent key
+     * inherits vanilla/mod structure-set behavior, not zero.
+     *
+     * This is a saved-world preference. Worldgen must read it at the correct
+     * pre-generation phase; it is not an immediate worldgen registry mutation.
+     */
+    public void changeVoidStructureWeights(Map<String, Integer> weights) {
+        if (!initialized()) {
+            throw new IllegalStateException("Initialize or migrate world profile first");
+        }
+        for (var entry : weights.entrySet()) {
+            if (!entry.getKey().matches("[a-z0-9_.-]+:[a-z0-9_./-]+")
+                    || entry.getValue() < 0 || entry.getValue() > 1000) {
+                throw new IllegalArgumentException("Invalid structure weight: " + entry);
+            }
+        }
+        var snapshot = Map.copyOf(weights);
+        if (!snapshot.equals(voidStructureWeights)) {
+            voidStructureWeights = snapshot;
             setDirty();
         }
     }

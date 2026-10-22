@@ -139,6 +139,17 @@ def config_translations(catalog: list[dict], additions: dict[str, bool],
         "skyvoid.ui.category.mobs": "Mob Mechanics",
         "skyvoid.ui.category.resources": "Resources & Crafting",
         "skyvoid.ui.category.world": "World & Portals",
+        "skyvoid.configuration.void_structure_replacement": "Void with Structures: Replacement",
+        "skyvoid.config.void_structure_replacement.enabled": "Enable Weighted Replacement (Experimental)",
+        "skyvoid.config.void_structure_replacement.enabled.tooltip":
+            "Only for the Void with Structures worldgen. Reopen the world to apply. "
+            "Experimental: back up saves before enabling.",
+        "skyvoid.config.void_structure_replacement.weights": "Vanilla & Modded Structure Weights",
+        "skyvoid.config.void_structure_replacement.weights.tooltip":
+            "Open a world to discover all installed structures automatically. "
+            "Set 0 to disable, 1 for default, up to 1000 to increase chance. "
+            "Existing chunks are not changed.",
+        "skyvoid.ui.void_structure_weights": "Browse Structure Weights...",
         "skyvoid.config.new_world.worldgen": "World Generation Profile",
         "skyvoid.config.new_world.worldgen.tooltip":
             "Choose the world generation used for future worlds. Changing this value will not convert an existing save.",
@@ -167,6 +178,17 @@ def config_translations(catalog: list[dict], additions: dict[str, bool],
         "skyvoid.ui.category.mobs": "Mecânicas de Criaturas",
         "skyvoid.ui.category.resources": "Recursos e Fabricação",
         "skyvoid.ui.category.world": "Mundo e Portais",
+        "skyvoid.configuration.void_structure_replacement": "Substituição de Estruturas do Vazio",
+        "skyvoid.config.void_structure_replacement.enabled": "Ativar Substituição Ponderada (Experimental)",
+        "skyvoid.config.void_structure_replacement.enabled.tooltip":
+            "Apenas para o perfil Vazio com Estruturas. Reabra o mundo para aplicar. "
+            "Experimental: faça backup dos mundos.",
+        "skyvoid.config.void_structure_replacement.weights": "Pesos de Estruturas Vanilla e Mods",
+        "skyvoid.config.void_structure_replacement.weights.tooltip":
+            "Abra um mundo para descobrir todas as estruturas instaladas. "
+            "0 desativa, 1 é padrão, até 1000 aumenta a chance. "
+            "Chunks existentes não são alterados.",
+        "skyvoid.ui.void_structure_weights": "Explorar Pesos das Estruturas...",
         "skyvoid.config.new_world.worldgen": "Geração de Mundo",
         "skyvoid.config.new_world.worldgen.tooltip":
             "Selecione a geração para futuros mundos. Isso não converte mundos existentes.",
