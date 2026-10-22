@@ -58,3 +58,38 @@ Example controls:
 - Verify density ratios and disabled structures in newly generated chunks.
 - Gameplay-test clean worlds and legacy worlds; no corruption or unintended
   changes from editing new-world defaults.
+
+## Tested intermediate workflow: per-world overlay installation
+
+For a development checkout after `mod:stageBeetPacks`:
+
+```bash
+python tools/install_world_structure_overrides.py \
+  --world "/path/to/.minecraft/saves/My World" \
+  --pack mod/build/generated/skyvoid-packs/data/skyvoid/datapacks/skyvoid_biome_islands \
+  --config docs/examples/structure-rarity-example.json
+```
+
+Close Minecraft before running the installer. It checks that the selected
+directory contains `level.dat`, validates all structure rules, and installs
+a dedicated `datapacks/skyvoid_structure_overrides` folder **only for that
+save**. It never rewrites `level.dat` or existing user datapacks.
+
+If that generated folder already exists, the installer refuses changes unless
+you pass `--replace`. Replacement preserves the old generated folder as
+`skyvoid_structure_overrides.backup` and refuses to overwrite an existing
+backup. Keep the backup **outside** `datapacks` after inspection, because
+Minecraft may recognize it as a separate datapack.
+
+On next world startup, ensure the generated
+`file/skyvoid_structure_overrides` datapack is enabled and ordered above
+the bundled biome-islands pack. If it is missing from the active pack list,
+enable it from the datapacks UI or Minecraft's `/datapack` commands before
+expecting structure changes to take effect. Only new chunks use the new
+placement rules. Running the command in a live world is not supported.
+
+**Still outstanding:** The final integrated mod UI must serialize settings
+per world, synthesize this pack **before registry load**, register it in
+the world's enabled pack order, and synchronize it with the profile import
+path implemented by PR #3. This intermediate CLI deliberately does not claim
+any of that behavior.
