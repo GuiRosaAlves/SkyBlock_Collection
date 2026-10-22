@@ -20,6 +20,19 @@ class ConfigurationUIMetadataTests(unittest.TestCase):
         self.assertIn("Requires Additional Wandering Trades",
                       data["sniffer_eggs_from_traders"]["description"])
 
+    def test_biome_islands_structure_ui_localizations_derive_from_pack_catalog(self):
+        example = {"skyvoid_biome_islands": {
+            "skyvoid_biome_islands:biome_islands": {
+                "structures": {"skyvoid_biome_islands:desert": 1,
+                               "skyvoid_biome_islands:badlands": 1}}}}
+        en, pt = config_translations([], {}, {}, example)
+        self.assertEqual(en["skyvoid.configuration.structures.biome_islands.desert"],
+                         "Desert Island")
+        self.assertIn("skyvoid.select.density.rare", en)
+        self.assertIn("skyvoid.select.density.rare", pt)
+        self.assertIn("weight", "skyvoid.config.structures.biome_islands.desert.weight")
+        self.assertIn("skyvoid.config.structures.biome_islands.desert.enabled", en)
+
     def test_all_boolean_settings_have_translatable_labels(self):
         defaults = addition_defaults(DEFAULTS)
         metadata = additions_descriptions(ROOT / MENU_SOURCE)

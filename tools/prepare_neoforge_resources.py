@@ -115,7 +115,8 @@ def additions_descriptions(source: Path = MENU_SOURCE) -> dict[str, dict[str, st
 
 
 def config_translations(catalog: list[dict], additions: dict[str, bool],
-                        metadata: dict[str, dict[str, str]]) -> tuple[dict, dict]:
+                        metadata: dict[str, dict[str, str]],
+                        structures_by_pack: dict | None = None) -> tuple[dict, dict]:
     """Return English text and Portuguese UI translations with safe fallbacks."""
     en = {
         "skyvoid.configuration.title": "SkyVoid Configuration",
@@ -212,6 +213,76 @@ def config_translations(catalog: list[dict], additions: dict[str, bool],
                                key.replace("_", " ") + " gameplay mechanic.")
         en[translation_key + ".tooltip"] = (description + "\n"
             "Applied to the active world's SkyVoid Additions scoreboard when saved.")
+    # Structure labels and count come from the same built-in JSON catalog
+    # consumed by SkyvoidConfig, so the UI cannot expose nonexistent islands.
+    en["skyvoid.configuration.structures"] = "Structure Generation"
+    en["skyvoid.configuration.structures.tooltip"] = (
+        "Controls are applied during world loading and affect newly generated chunks only."
+    )
+    en["skyvoid.configuration.structures.biome_islands"] = "Biome Island Structures"
+    en["skyvoid.configuration.structures.biome_islands.tooltip"] = (
+        "Requires Optional Datapacks > Biome Islands. Density changes the "
+        "distance between placement attempts. Structure weights adjust relative rarity."
+    )
+    pt["skyvoid.configuration.structures.tooltip"] = (
+        "As alterações são aplicadas ao carregar o mundo e afetam somente chunks novos."
+    )
+    pt["skyvoid.configuration.structures.biome_islands"] = "Estruturas das Ilhas de Bioma"
+    pt["skyvoid.configuration.structures.biome_islands.tooltip"] = (
+        "Requer o datapack opcional Ilhas de Bioma. A densidade altera o espaçamento "
+        "entre tentativas; o peso altera a chance relativa de cada ilha."
+    )
+    density_labels = {
+        "very_rare": ("Very Rare", "Muito Rara"),
+        "rare": ("Rare", "Rara"),
+        "normal": ("Normal (Original)", "Normal (Original)"),
+        "common": ("Common", "Comum"),
+        "very_common": ("Very Common", "Muito Comum"),
+    }
+    en["skyvoid.config.structures.biome_islands.density"] = "Overall Density"
+    pt["skyvoid.config.structures.biome_islands.density"] = "Densidade Geral"
+    en["skyvoid.config.structures.biome_islands.density.tooltip"] = (
+        "Very Rare doubles spacing; Rare increases it 50%; Common decreases "
+        "it 25%; Very Common halves it (respecting Minecraft's minimum separation). "
+        "Requires reopening the world; existing structures are unchanged."
+    )
+    pt["skyvoid.config.structures.biome_islands.density.tooltip"] = (
+        "Controla o espaçamento das ilhas. Reabra o mundo para aplicar. "
+        "Estruturas já geradas não são alteradas."
+    )
+    for value, (english, portuguese) in density_labels.items():
+        en["skyvoid.select.density." + value] = english
+        pt["skyvoid.select.density." + value] = portuguese
+    biome_sets = (structures_by_pack or {}).get("skyvoid_biome_islands", {})
+    biome_set = biome_sets.get("skyvoid_biome_islands:biome_islands", {})
+    for structure_id in biome_set.get("structures", {}):
+        namespace, short_name = structure_id.split(":", 1)
+        if namespace != "skyvoid_biome_islands":
+            raise ValueError("Unexpected biome island structure: " + structure_id)
+        label = short_name.replace("_", " ").title()
+        group = "skyvoid.configuration.structures.biome_islands." + short_name
+        prefix = "skyvoid.config.structures.biome_islands." + short_name
+        en[group] = label + " Island"
+        pt[group] = "Ilha de " + label
+        en[prefix + ".enabled"] = "Generate This Island"
+        pt[prefix + ".enabled"] = "Gerar Esta Ilha"
+        en[prefix + ".enabled.tooltip"] = (
+            "Include this island when choosing a biome island in newly generated chunks. "
+            "Reopen the world to apply."
+        )
+        pt[prefix + ".enabled.tooltip"] = (
+            "Permite esta ilha em chunks novos. Reabra o mundo para aplicar."
+        )
+        en[prefix + ".weight"] = "Relative Rarity Weight"
+        pt[prefix + ".weight"] = "Peso Relativo"
+        en[prefix + ".weight.tooltip"] = (
+            "Higher weights increase the chance of choosing this island relative "
+            "to other enabled islands, not the overall generation frequency."
+        )
+        pt[prefix + ".weight.tooltip"] = (
+            "Um peso maior torna esta ilha mais provável em relação às outras "
+            "ilhas ativadas, sem alterar a frequência total."
+        )
     return en, pt
 
 
@@ -308,7 +379,7 @@ def build_catalog(build_dir: Path, output_dir: Path, source_file: Path) -> dict:
     # Use the authors' original mechanic names/descriptions instead of
     # technical config ids. Missing menu items receive a readable fallback.
     menu_metadata = additions_descriptions()
-    en, pt = config_translations(catalog, additions, menu_metadata)
+    en, pt = config_translations(catalog, additions, menu_metadata, structures_by_pack)
     language_dir = output_dir / "assets" / "skyvoid" / "lang"
     language_dir.mkdir(parents=True, exist_ok=True)
     for locale, translations in (("en_us", en), ("pt_br", pt)):
