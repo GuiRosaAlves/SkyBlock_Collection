@@ -150,6 +150,28 @@ def config_translations(catalog: list[dict], additions: dict[str, bool],
         "skyvoid.config.new_world.island.tooltip":
             "Selecione a ilha inicial para novos mundos. Ilhas existentes não são regeneradas.",
     }
+    # The values stored in skyvoid-common.toml stay unchanged; these keys
+    # provide readable labels for the cycle-button selector only.
+    worldgen_labels = {
+        "skyvoid_worldgen": "SkyVoid (Default)",
+        "skyvoid_worldgen_empty": "Completely Empty",
+        "skyvoid_worldgen_full_lava": "Full Lava",
+        "skyvoid_worldgen_normal_end": "Normal End",
+        "skyvoid_worldgen_noxiousvex": "NoxiousVex Variant",
+        "skyvoid_worldgen_pinu": "Pinu Variant",
+        "skyvoid_worldgen_portal_room": "Portal Room",
+        "skyvoid_worldgen_single_lava": "Single Lava",
+        "skyvoid_worldgen_structures": "Void with Structures",
+    }
+    island_labels = {
+        "skyvoid_island_standard": "Standard Skyblock",
+        "skyvoid_island_only_dirt": "Dirt Only",
+        "skyvoid_island_oneblock": "OneBlock",
+    }
+    for key, name in worldgen_labels.items():
+        en["skyvoid.select.worldgen." + key] = name
+    for key, name in island_labels.items():
+        en["skyvoid.select.island." + key] = name
     for item in catalog:
         if item["group"] != "optional":
             continue

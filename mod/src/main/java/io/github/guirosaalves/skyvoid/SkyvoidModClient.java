@@ -15,7 +15,8 @@ public final class SkyvoidModClient {
     public SkyvoidModClient(ModContainer container) {
         container.registerExtensionPoint(
                 IConfigScreenFactory.class,
-                (mod, parent) -> new ConfigurationScreen(container, parent)
+                (mod, parent) -> new ConfigurationScreen(container, parent,
+                        SkyvoidConfigSectionScreen::new)
         );
     }
 }
