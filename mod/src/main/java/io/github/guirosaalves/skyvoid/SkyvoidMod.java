@@ -56,6 +56,10 @@ public final class SkyvoidMod {
             addDataPack(event, SkyvoidConfig.WORLDGEN.get());
             addDataPack(event, SkyvoidConfig.ISLAND.get());
 
+            // Overlay selected structure sets at registry-load time.
+            // No pack is registered for untouched defaults.
+            SkyvoidStructurePack.register(event);
+
             for (var entry : SkyvoidConfig.OPTIONAL.entrySet()) {
                 if (!entry.getValue().get()) {
                     continue;
