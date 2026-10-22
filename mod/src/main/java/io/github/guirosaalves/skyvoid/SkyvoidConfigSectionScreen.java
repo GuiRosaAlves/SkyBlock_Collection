@@ -107,6 +107,24 @@ public final class SkyvoidConfigSectionScreen extends ConfigurationScreen.Config
     @Override
     protected Element createStringValue(String key, Predicate<String> tester,
                                         Supplier<String> source, Consumer<String> target) {
+        if (context.keylist().equals(List.of("structures", "biome_islands"))
+                && "density".equals(key)) {
+            var options = SkyvoidConfig.BIOME_ISLAND_DENSITIES;
+            return new Element(getTranslationComponent(key), getTooltipComponent(key, null),
+                    new OptionInstance<>(getTranslationKey(key), getTooltip(key, null),
+                            (caption, value) -> Component.translatable("skyvoid.select.density." + value),
+                            new Custom<>(options), source.get(), value -> {
+                                if (!value.equals(source.get()) && tester.test(value)) {
+                                    undoManager.add(previous -> {
+                                        target.accept(previous);
+                                        onChanged(key);
+                                    }, value, previous -> {
+                                        target.accept(previous);
+                                        onChanged(key);
+                                    }, source.get());
+                                }
+                            }));
+        }
         if (context.keylist().equals(List.of("new_world"))) {
             List<String> options = switch (key) {
                 case "worldgen" -> SkyvoidConfig.WORLDGEN_IDS;
