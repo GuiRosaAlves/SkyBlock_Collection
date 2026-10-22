@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/neoforge-26-2-integration-plan
+      - feature/live-config-world-migration
   push:
     branches:
       - main
