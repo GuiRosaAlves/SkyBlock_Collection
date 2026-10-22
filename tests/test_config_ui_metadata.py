@@ -32,6 +32,10 @@ class ConfigurationUIMetadataTests(unittest.TestCase):
             self.assertIn("skyvoid.configuration." + group, en)
             self.assertIn("skyvoid.configuration." + group, pt)
         self.assertNotIn("**", en["skyvoid.config.additions.sniffer_eggs_from_traders.tooltip"])
+        for category in ("all", "trades", "mobs", "resources", "world"):
+            self.assertIn("skyvoid.ui.category." + category, en)
+            self.assertIn("skyvoid.ui.category." + category, pt)
+        self.assertIn("skyvoid.ui.search", en)
 
 
 if __name__ == "__main__":
