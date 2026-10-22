@@ -56,10 +56,6 @@ public final class SkyvoidMod {
             addDataPack(event, SkyvoidConfig.WORLDGEN.get());
             addDataPack(event, SkyvoidConfig.ISLAND.get());
 
-            // Overlay selected structure sets at registry-load time.
-            // No pack is registered for untouched defaults.
-            SkyvoidStructurePack.register(event);
-
             for (var entry : SkyvoidConfig.OPTIONAL.entrySet()) {
                 if (!entry.getValue().get()) {
                     continue;
@@ -70,6 +66,10 @@ public final class SkyvoidMod {
                 }
                 addDataPack(event, entry.getKey());
             }
+            // Register last so the generated structure-set JSON outranks
+            // its source biome-islands pack in the data pack stack.
+            // No overlay is registered when all settings are at defaults.
+            SkyvoidStructurePack.register(event);
         } else if (event.getPackType() == PackType.CLIENT_RESOURCES) {
             // Keep RP distinct from the advancement datapack.
             if (SkyvoidConfig.OPTIONAL.get("skyvoid_advancements").get()) {
