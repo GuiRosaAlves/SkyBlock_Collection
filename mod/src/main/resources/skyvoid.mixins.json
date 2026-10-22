@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "io.github.guirosaalves.skyvoid.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": ["SkyvoidChunkGeneratorMixin", "SkyvoidStructureStartMixin"],
+  "injectors": {"defaultRequire": 1}
+}

@@ -57,6 +57,9 @@ public final class SkyvoidConfig {
     public static final Map<String, ModConfigSpec.BooleanValue> BIOME_ISLAND_ENABLED;
     public static final Map<String, ModConfigSpec.IntValue> BIOME_ISLAND_WEIGHTS;
 
+    public static final ModConfigSpec.BooleanValue VOID_STRUCTURE_REPLACEMENT_ENABLED;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> VOID_STRUCTURE_WEIGHT_RULES;
+
     public static final ModConfigSpec SPEC;
     public static final ModConfigSpec.ConfigValue<String> WORLDGEN;
     public static final ModConfigSpec.ConfigValue<String> ISLAND;
@@ -154,6 +157,24 @@ public final class SkyvoidConfig {
         BIOME_ISLAND_WEIGHTS = Map.copyOf(weights);
         builder.pop(2);
 
+        // Experimental replacement applies ONLY to the Void with Structures
+        // profile. Defaults are intentionally disabled for existing worlds.
+        builder.comment("Experimental vanilla/modded replacement at natural structure starts.")
+                .translation("skyvoid.configuration.void_structure_replacement")
+                .push("void_structure_replacement");
+        VOID_STRUCTURE_REPLACEMENT_ENABLED = builder
+                .comment("Experimental. Requires reopening the world.")
+                .translation("skyvoid.config.void_structure_replacement.enabled")
+                .worldRestart().define("enabled", false);
+        VOID_STRUCTURE_WEIGHT_RULES = builder
+                .comment("List namespaced structure IDs with weights 0..1000:",
+                         "minecraft:igloo=8, custom:snow_tower=4; zero disables.",
+                         "This does not affect the Biome Islands controls.")
+                .translation("skyvoid.config.void_structure_replacement.weights")
+                .worldRestart().defineListAllowEmpty("weights", List.<String>of(),
+                        () -> "minecraft:igloo=1", SkyvoidConfig::validVoidStructureRule);
+        builder.pop();
+
         SPEC = builder.build();
     }
 
@@ -205,6 +226,31 @@ public final class SkyvoidConfig {
         } catch (IOException e) {
             throw new IllegalStateException("Cannot read generated structure catalog", e);
         }
+    }
+
+    private static boolean validVoidStructureRule(Object value) {
+        if (!(value instanceof String raw)) return false;
+        int at = raw.lastIndexOf('=');
+        if (at < 1 || at == raw.length() - 1 ||
+                !raw.substring(0, at).matches("[a-z0-9_.-]+:[a-z0-9_./-]+")) return false;
+        try {
+            int w = Integer.parseInt(raw.substring(at + 1));
+            return w >= 0 && w <= 1000;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    public static Map<String, Integer> voidStructureWeightOverrides() {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        for (String line : VOID_STRUCTURE_WEIGHT_RULES.get()) {
+            if (!validVoidStructureRule(line)) throw new IllegalStateException("Invalid structure rule: " + line);
+            int at = line.lastIndexOf('=');
+            String id = line.substring(0, at);
+            if (result.putIfAbsent(id, Integer.parseInt(line.substring(at + 1))) != null)
+                throw new IllegalArgumentException("Duplicate structure weight: " + id);
+        }
+        return Map.copyOf(result);
     }
 
 }
