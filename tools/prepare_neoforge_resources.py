@@ -14,6 +14,8 @@ import shutil
 from pathlib import Path
 from zipfile import ZipFile
 
+from tools.structure_overrides import structure_catalog
+
 WORLDGEN = {
     "skyvoid_worldgen",
     "skyvoid_worldgen_empty",
@@ -267,6 +269,20 @@ def build_catalog(build_dir: Path, output_dir: Path, source_file: Path) -> dict:
     )
     (settings_dir / "additions-defaults.json").write_text(
         json.dumps(additions, indent=2) + "\n", encoding="utf-8"
+    )
+    # Each profile owns its own registry entries. Do not flatten all variants
+    # into one manifest; different worldgen choices can share the same
+    # registry identifier with intentionally different definitions.
+    structures_by_pack = {}
+    for item in catalog:
+        if item["group"] == "resource":
+            continue
+        pack_path = output_dir / "data" / "skyvoid" / "datapacks" / item["id"]
+        entries = structure_catalog([pack_path])
+        if entries:
+            structures_by_pack[item["id"]] = entries
+    (settings_dir / "structure-catalog.json").write_text(
+        json.dumps(structures_by_pack, indent=2) + "\n", encoding="utf-8"
     )
     # Use the authors' original mechanic names/descriptions instead of
     # technical config ids. Missing menu items receive a readable fallback.

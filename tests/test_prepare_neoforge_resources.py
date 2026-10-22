@@ -80,6 +80,28 @@ class NeoForgeStagingTests(unittest.TestCase):
             False,
         )
 
+    def test_staging_emits_pack_scoped_structure_catalog(self):
+        self.add_required_packs()
+        archive = self.add_pack("skyvoid_biome_islands")
+        structure = {
+            "structures": [{"structure": "skyvoid_biome_islands:desert", "weight": 1}],
+            "placement": {"type": "minecraft:random_spread",
+                          "spacing": 20, "separation": 8, "salt": 10387312},
+        }
+        with ZipFile(archive, "a") as zip_file:
+            zip_file.writestr(
+                "data/skyvoid_biome_islands/worldgen/structure_set/biome_islands.json",
+                json.dumps(structure),
+            )
+        build_catalog(self.build, self.staged, self.source)
+        index = json.loads((
+            self.staged / "assets/skyvoid/config/structure-catalog.json"
+        ).read_text(encoding="utf-8"))
+        self.assertIn("skyvoid_biome_islands", index)
+        entry = index["skyvoid_biome_islands"]["skyvoid_biome_islands:biome_islands"]
+        self.assertEqual(entry["structures"]["skyvoid_biome_islands:desert"], 1)
+        self.assertEqual(entry["placement_type"], "minecraft:random_spread")
+
     def test_missing_required_pack_fails_before_touching_output(self):
         self.add_pack("skyvoid_additions")
         with self.assertRaisesRegex(ValueError, "Missing required"):
