@@ -91,13 +91,18 @@ public abstract class SkyvoidChunkGeneratorMixin {
                             new StructureSet.StructureSelectionEntry(holders.get(candidate.id()), 1),
                             structureManager, registryAccess, randomState, templateManager,
                             seed, centerChunk, sourceChunkPos, sectionPos, dimension));
+            boolean retainedPlaceholder = false;
             if (weights.getOrDefault(originId, 1) == 0) {
                 // Retain a genuine start and bounding box for a disabled
                 // original; the separate placeInChunk mixin suppresses blocks.
-                skyvoid$tryNative(selected, structureManager, registryAccess, randomState,
-                        templateManager, seed, centerChunk, sourceChunkPos, sectionPos, dimension);
+                retainedPlaceholder = skyvoid$tryNative(selected, structureManager, registryAccess,
+                        randomState, templateManager, seed, centerChunk, sourceChunkPos, sectionPos,
+                        dimension);
             }
-            cir.setReturnValue(replacement.isPresent());
+            // Tell vanilla that a valid start (replacement or placeholder)
+            // was already stored. Returning false after storing a placeholder
+            // could cause an extra structure to be selected from this set.
+            cir.setReturnValue(replacement.isPresent() || retainedPlaceholder);
         } finally {
             skyvoid$nativeAttempt.remove();
         }
