@@ -19,7 +19,7 @@ import java.util.Objects;
  * before dynamic registries are loaded; SavedData is not available that early.
  */
 public final class SkyvoidWorldProfile extends SavedData {
-    public static final int CURRENT_VERSION = 1;
+    public static final int CURRENT_VERSION = 2;
 
     public static final Codec<SkyvoidWorldProfile> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.INT.optionalFieldOf("schema_version", CURRENT_VERSION).forGetter(p -> p.schemaVersion),
@@ -28,7 +28,9 @@ public final class SkyvoidWorldProfile extends SavedData {
             Codec.STRING.optionalFieldOf("island", "").forGetter(p -> p.island),
             Codec.unboundedMap(Codec.STRING, Codec.BOOL).optionalFieldOf("optional_packs", Map.of()).forGetter(p -> p.optionalPacks),
             Codec.unboundedMap(Codec.STRING, Codec.BOOL).optionalFieldOf("additions", Map.of()).forGetter(p -> p.additions),
-            Codec.BOOL.optionalFieldOf("migration_complete", false).forGetter(p -> p.migrationComplete)
+            Codec.BOOL.optionalFieldOf("migration_complete", false).forGetter(p -> p.migrationComplete),
+            Codec.unboundedMap(Codec.STRING, SkyvoidStructureSetRule.CODEC)
+                    .optionalFieldOf("structure_sets", Map.of()).forGetter(p -> p.structureSets)
     ).apply(instance, SkyvoidWorldProfile::new));
 
     public static final SavedDataType<SkyvoidWorldProfile> TYPE = new SavedDataType<>(
@@ -44,14 +46,16 @@ public final class SkyvoidWorldProfile extends SavedData {
     private Map<String, Boolean> optionalPacks;
     private Map<String, Boolean> additions;
     private boolean migrationComplete;
+    private Map<String, SkyvoidStructureSetRule> structureSets;
 
     public SkyvoidWorldProfile() {
-        this(CURRENT_VERSION, "uninitialized", "", "", Map.of(), Map.of(), false);
+        this(CURRENT_VERSION, "uninitialized", "", "", Map.of(), Map.of(), false, Map.of());
     }
 
     private SkyvoidWorldProfile(int schemaVersion, String origin, String worldgen, String island,
                                 Map<String, Boolean> optionalPacks, Map<String, Boolean> additions,
-                                boolean migrationComplete) {
+                                boolean migrationComplete,
+                                Map<String, SkyvoidStructureSetRule> structureSets) {
         this.schemaVersion = schemaVersion;
         this.origin = Objects.requireNonNull(origin);
         this.worldgen = Objects.requireNonNull(worldgen);
@@ -59,6 +63,7 @@ public final class SkyvoidWorldProfile extends SavedData {
         this.optionalPacks = Map.copyOf(optionalPacks);
         this.additions = Map.copyOf(additions);
         this.migrationComplete = migrationComplete;
+        this.structureSets = Map.copyOf(structureSets);
     }
 
     /** Call on the logical server thread only. */
@@ -76,6 +81,7 @@ public final class SkyvoidWorldProfile extends SavedData {
     public Map<String, Boolean> optionalPacks() { return optionalPacks; }
     public Map<String, Boolean> additions() { return additions; }
     public boolean migrationComplete() { return migrationComplete; }
+    public Map<String, SkyvoidStructureSetRule> structureSets() { return structureSets; }
 
     /**
      * Only migration/bootstrap may initialize a world. This is deliberately
@@ -110,6 +116,22 @@ public final class SkyvoidWorldProfile extends SavedData {
         var copy = Map.copyOf(updated);
         if (!copy.equals(additions)) {
             additions = copy;
+            setDirty();
+        }
+    }
+
+    /**
+     * Edit only the structure definitions belonging to this save. Installing
+     * and activating the corresponding data pack before registry load is a
+     * separate explicit action; never hot-swap active worldgen registries.
+     */
+    public void changeStructureSets(Map<String, SkyvoidStructureSetRule> rules) {
+        if (!initialized()) {
+            throw new IllegalStateException("Initialize or migrate world profile first");
+        }
+        Map<String, SkyvoidStructureSetRule> snapshot = Map.copyOf(rules);
+        if (!structureSets.equals(snapshot)) {
+            structureSets = snapshot;
             setDirty();
         }
     }
