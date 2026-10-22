@@ -9,6 +9,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.List;
 import java.util.Map;
@@ -102,6 +103,28 @@ public final class SkyvoidConfigSectionScreen extends ConfigurationScreen.Config
             return null;
         }
         return super.createBooleanValue(key, spec, source, target);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    protected <T> Element createList(String key, ModConfigSpec.ListValueSpec spec,
+                                     ModConfigSpec.ConfigValue<List<T>> list) {
+        if ("weights".equals(key)
+                && context.keylist().equals(List.of("void_structure_replacement"))) {
+            var weightList = (ModConfigSpec.ConfigValue<List<String>>) (Object) list;
+            var tooltip = getTooltipComponent(key, null);
+            var button = Button.builder(
+                    Component.translatable("skyvoid.ui.void_structure_weights"),
+                    clicked -> minecraft.gui.setScreen(
+                            new SkyvoidVoidStructureWeightsScreen(
+                                    Context.list(context, this), key, getTranslationComponent(key),
+                                    spec, weightList).rebuild()))
+                    .tooltip(Tooltip.create(tooltip))
+                    .width(Button.DEFAULT_WIDTH)
+                    .build();
+            return new Element(getTranslationComponent(key), tooltip, button, false);
+        }
+        return super.createList(key, spec, list);
     }
 
     @Override

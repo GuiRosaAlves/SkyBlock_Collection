@@ -83,3 +83,22 @@ No claim of working in-game replacement until that integration and tests pass.
       mod removal, world seeds, and pack conflicts.
 - [ ] Preserve all optional Biome Islands settings unchanged.
 - [ ] Production dedicated-server and client tests + manual worldgen tests.
+
+## Structure weights UI prototype
+
+The Common Config section `Void with Structures: Replacement` provides an
+experimental enable switch and the **Browse Structure Weights** editor. When
+a world is loaded, this editor discovers vanilla/modded structure identifiers
+from the client's synchronized structure registry, sorts vanilla first and
+modded second, and exposes a numeric weight for each. Weight 0 disables an
+entry; 1 is the default; up to 1000 increases its weighted selection chance.
+
+The UI edits the global COMMON configuration until the early-readable,
+per-world profile system is fully implemented. Editing weights while a world
+is open requires leaving and reopening it to apply; this is **not** an
+immediate generator refresh. Without a loaded world, the same editor supports
+adding namespaced `id=weight` entries manually. An absent entry uses 1.
+
+This is only for `skyvoid_worldgen_structures`, entirely separate from the
+optional Biome Islands pack and its configuration. In-game structure starts,
+reference management and placeholder bounds still require intensive validation.
