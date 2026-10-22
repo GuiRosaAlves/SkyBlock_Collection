@@ -117,29 +117,36 @@ public final class SkyvoidConfig {
         // Structure controls are intentionally limited to real supported
         // random-spread structure sets. Strongholds and starter-island markers
         // are excluded because changing them can break world progression.
-        builder.push("structures");
-        builder.comment("Controls affect structure generation after reloading the world.",
-                "Only newly generated chunks can use changed placements.")
+        builder.comment("Structure generation is resolved before world load.",
+                "Only newly generated chunks will use changed placement rules.")
+                .translation("skyvoid.configuration.structures")
+                .push("structures");
+        builder.comment("Biome Island structures (requires Optional Datapacks > Biome Islands).")
+                .translation("skyvoid.configuration.structures.biome_islands")
                 .push("biome_islands");
         BIOME_ISLAND_DENSITY = builder
                 .comment("Overall frequency of biome islands. Normal preserves the datapack default.",
                         "Requires Optional Datapacks > Biome Islands to be enabled.")
                 .translation("skyvoid.config.structures.biome_islands.density")
+                .worldRestart()
                 .defineInList("density", "normal", new ArrayList<>(BIOME_ISLAND_DENSITIES));
 
         Map<String, ModConfigSpec.BooleanValue> enabled = new LinkedHashMap<>();
         Map<String, ModConfigSpec.IntValue> weights = new LinkedHashMap<>();
         for (var entry : readBiomeIslandWeights().entrySet()) {
             String id = entry.getKey();
-            builder.push(id);
+            builder.translation("skyvoid.configuration.structures.biome_islands." + id)
+                    .push(id);
             enabled.put(id, builder
                     .comment("Allow this biome island to generate in newly explored chunks.")
                     .translation("skyvoid.config.structures.biome_islands." + id + ".enabled")
+                    .worldRestart()
                     .define("enabled", true));
             weights.put(id, builder
                     .comment("Relative selection weight (1 to 1000).",
                              "Weights do not change overall structure placement frequency.")
                     .translation("skyvoid.config.structures.biome_islands." + id + ".weight")
+                    .worldRestart()
                     .defineInRange("weight", entry.getValue(), 1, 1000));
             builder.pop();
         }
