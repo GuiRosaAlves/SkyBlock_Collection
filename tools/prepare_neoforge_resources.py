@@ -79,6 +79,97 @@ def addition_defaults(source: Path) -> dict[str, bool]:
     return defaults
 
 
+MENU_SOURCE = Path(
+    "src/packs/extras/skyvoid_additions/data/skyvoid_additions/"
+    "function/customize/update_config/open_menu.mcfunction"
+)
+
+
+def additions_descriptions(source: Path = MENU_SOURCE) -> dict[str, dict[str, str]]:
+    """Read the original datapack's human-authored config-menu catalog.
+
+    The open_menu file uses Mecha nesting: its all_settings literal is valid
+    JSON, so we extract and decode it rather than duplicating labels manually.
+    """
+    if not source.is_file():
+        return {}
+    contents = source.read_text(encoding="utf-8")
+    match = re.search(r"(?ms)^all_settings = (\[.*?^\])\s*page_size", contents)
+    if match is None:
+        raise ValueError("Unable to find Additions menu setting catalog")
+    data = json.loads(match.group(1))
+    result = {}
+    for item in data:
+        key = item["id"]
+        if key in result:
+            raise ValueError(f"Duplicate Additions menu setting: {key}")
+        result[key] = {"name": item["name"], "description": item["desc"].replace("**", "")}
+    return result
+
+
+def config_translations(catalog: list[dict], additions: dict[str, bool],
+                        metadata: dict[str, dict[str, str]]) -> tuple[dict, dict]:
+    """Return English text and Portuguese UI translations with safe fallbacks."""
+    en = {
+        "skyvoid.configuration.title": "SkyVoid Configuration",
+        "skyvoid.configuration.new_world": "New World Defaults",
+        "skyvoid.configuration.new_world.button": "Choose...",
+        "skyvoid.configuration.new_world.tooltip":
+            "Defaults for newly created worlds only. Existing worlds keep their saved generation.",
+        "skyvoid.configuration.optional_packs": "Optional Datapacks",
+        "skyvoid.configuration.optional_packs.tooltip":
+            "Pack selection is resolved before world generation; existing worlds are not modified live.",
+        "skyvoid.configuration.additions": "Gameplay Additions",
+        "skyvoid.configuration.additions.tooltip":
+            "Configure SkyVoid Additions gameplay mechanics. In singleplayer, changes to active mechanics apply when saved.",
+        "skyvoid.configuration.structures": "Structure Generation",
+        "skyvoid.config.new_world.worldgen": "World Generation Profile",
+        "skyvoid.config.new_world.worldgen.tooltip":
+            "Choose the world generation used for future worlds. Changing this value will not convert an existing save.",
+        "skyvoid.config.new_world.island": "Starting Island",
+        "skyvoid.config.new_world.island.tooltip":
+            "Choose the starter island for future worlds. Existing islands are never regenerated.",
+    }
+    pt = {
+        "skyvoid.configuration.title": "Configuração SkyVoid",
+        "skyvoid.configuration.new_world": "Padrões para Novos Mundos",
+        "skyvoid.configuration.new_world.button": "Selecionar...",
+        "skyvoid.configuration.new_world.tooltip":
+            "Padrões apenas para mundos novos. Mundos existentes preservam sua geração.",
+        "skyvoid.configuration.optional_packs": "Datapacks Opcionais",
+        "skyvoid.configuration.optional_packs.tooltip":
+            "A seleção de datapacks é feita antes de carregar o mundo; mundos existentes não são alterados imediatamente.",
+        "skyvoid.configuration.additions": "Mecânicas Adicionais",
+        "skyvoid.configuration.additions.tooltip":
+            "Configure as mecânicas de SkyVoid Additions. Em um mundo local, as alterações podem ser aplicadas ao salvar.",
+        "skyvoid.configuration.structures": "Geração de Estruturas",
+        "skyvoid.config.new_world.worldgen": "Geração de Mundo",
+        "skyvoid.config.new_world.worldgen.tooltip":
+            "Selecione a geração para futuros mundos. Isso não converte mundos existentes.",
+        "skyvoid.config.new_world.island": "Ilha Inicial",
+        "skyvoid.config.new_world.island.tooltip":
+            "Selecione a ilha inicial para novos mundos. Ilhas existentes não são regeneradas.",
+    }
+    for item in catalog:
+        if item["group"] != "optional":
+            continue
+        pack_id = item["id"]
+        key = "skyvoid.config.optional_packs." + pack_id
+        display_name = pack_id.removeprefix("skyvoid_").replace("_", " ").title()
+        en[key] = display_name
+        en[key + ".tooltip"] = ("Include " + display_name + " for newly created worlds. "
+                                "Existing-world pack selection requires a world reload.")
+    for key in additions:
+        text = metadata.get(key, {})
+        translation_key = "skyvoid.config.additions." + key
+        en[translation_key] = text.get("name", key.replace("_", " ").title())
+        description = text.get("description",
+                               key.replace("_", " ") + " gameplay mechanic.")
+        en[translation_key + ".tooltip"] = (description + "\n"
+            "Applied to the active world's SkyVoid Additions scoreboard when saved.")
+    return en, pt
+
+
 def stage_pack(archive: Path, destination: Path) -> str:
     """Safely copy ZIP pack members into a private built-in-pack directory."""
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
@@ -155,26 +246,17 @@ def build_catalog(build_dir: Path, output_dir: Path, source_file: Path) -> dict:
     (settings_dir / "additions-defaults.json").write_text(
         json.dumps(additions, indent=2) + "\n", encoding="utf-8"
     )
-    # Name and describe each setting in NeoForge's built-in config screen.
-    translations = {
-        "skyvoid.config.new_world.worldgen": "World Generation Profile",
-        "skyvoid.config.new_world.island": "Starting Island",
-    }
-    for item in catalog:
-        if item["group"] == "optional":
-            pack_id = item["id"]
-            translations["skyvoid.config.optional_packs." + pack_id] = (
-                pack_id.removeprefix("skyvoid_").replace("_", " ").title()
-            )
-    for setting in additions:
-        translations["skyvoid.config.additions." + setting] = (
-            setting.replace("_", " ").title()
-        )
+    # Use the authors' original mechanic names/descriptions instead of
+    # technical config ids. Missing menu items receive a readable fallback.
+    menu_metadata = additions_descriptions()
+    en, pt = config_translations(catalog, additions, menu_metadata)
     language_dir = output_dir / "assets" / "skyvoid" / "lang"
     language_dir.mkdir(parents=True, exist_ok=True)
-    (language_dir / "en_us.json").write_text(
-        json.dumps(translations, indent=2) + "\n", encoding="utf-8"
-    )
+    for locale, translations in (("en_us", en), ("pt_br", pt)):
+        (language_dir / (locale + ".json")).write_text(
+            json.dumps(translations, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8"
+        )
     return {"packs": len(catalog), "addition_settings": len(additions)}
 
 
