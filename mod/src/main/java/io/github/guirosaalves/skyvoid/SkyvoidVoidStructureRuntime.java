@@ -19,6 +19,7 @@ public final class SkyvoidVoidStructureRuntime {
     }
 
     private static volatile Settings active;
+    private static Map<String, Integer> lastEditedCommonWeights = Map.of();
 
     private SkyvoidVoidStructureRuntime() {}
 
@@ -31,12 +32,31 @@ public final class SkyvoidVoidStructureRuntime {
     }
 
     public static void activate(SkyvoidWorldProfile profile) {
+        lastEditedCommonWeights = SkyvoidConfig.rawVoidStructureWeights();
         active = resolve(profile, SkyvoidConfig.VOID_STRUCTURE_REPLACEMENT_ENABLED.get(),
                 SkyvoidConfig.WORLDGEN.get(), SkyvoidConfig.voidStructureWeightOverrides());
     }
 
+    /**
+     * Called on the logical server thread after a COMMON config save. Only
+     * an actual weight-list edit changes the active world's persistent data;
+     * editing Additions or other global fields cannot reset saved weights.
+     * The already-active chunk generator snapshot is left alone until reload.
+     */
+    public static void persistExplicitWeightChanges(SkyvoidWorldProfile profile) {
+        var latest = SkyvoidConfig.rawVoidStructureWeights();
+        if (!latest.equals(lastEditedCommonWeights)) {
+            if (profile.initialized()
+                    && "skyvoid_worldgen_structures".equals(profile.worldgen())) {
+                profile.changeVoidStructureWeights(latest);
+            }
+            lastEditedCommonWeights = latest;
+        }
+    }
+
     public static void deactivate() {
         active = null;
+        lastEditedCommonWeights = Map.of();
     }
 
     public static Settings current() {

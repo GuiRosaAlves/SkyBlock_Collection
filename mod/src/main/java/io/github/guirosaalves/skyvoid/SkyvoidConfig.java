@@ -242,8 +242,21 @@ public final class SkyvoidConfig {
     }
 
     public static Map<String, Integer> voidStructureWeightOverrides() {
+        return parseVoidStructureWeights(VOID_STRUCTURE_WEIGHT_RULES.get());
+    }
+
+    /**
+     * The list editor updates the underlying TOML before worldRestart
+     * invalidates the cached get() value. getRaw() observes the new value
+     * so that an explicit change can be persisted to this save for next boot.
+     */
+    public static Map<String, Integer> rawVoidStructureWeights() {
+        return parseVoidStructureWeights(VOID_STRUCTURE_WEIGHT_RULES.getRaw());
+    }
+
+    private static Map<String, Integer> parseVoidStructureWeights(List<? extends String> rules) {
         Map<String, Integer> result = new LinkedHashMap<>();
-        for (String line : VOID_STRUCTURE_WEIGHT_RULES.get()) {
+        for (String line : rules) {
             if (!validVoidStructureRule(line)) throw new IllegalStateException("Invalid structure rule: " + line);
             int at = line.lastIndexOf('=');
             String id = line.substring(0, at);

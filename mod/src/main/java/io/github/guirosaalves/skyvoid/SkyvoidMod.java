@@ -113,7 +113,10 @@ public final class SkyvoidMod {
             return;
         }
         server.execute(() -> {
-            if (activeServer == server && SkyvoidConfig.OPTIONAL.get("skyvoid_additions").get()) {
+            if (activeServer != server) return;
+            SkyvoidVoidStructureRuntime.persistExplicitWeightChanges(
+                    SkyvoidWorldProfile.forServer(server));
+            if (SkyvoidConfig.OPTIONAL.get("skyvoid_additions").get()) {
                 applyAdditions(server, snapshotAdditions());
             }
         });
