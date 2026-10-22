@@ -2,7 +2,7 @@
 import unittest
 from pathlib import Path
 from tools.prepare_neoforge_resources import (
-    MENU_SOURCE, additions_defaults, additions_descriptions, config_translations,
+    MENU_SOURCE, addition_defaults, additions_descriptions, config_translations,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,7 +21,7 @@ class ConfigurationUIMetadataTests(unittest.TestCase):
                       data["sniffer_eggs_from_traders"]["description"])
 
     def test_all_boolean_settings_have_translatable_labels(self):
-        defaults = additions_defaults(DEFAULTS)
+        defaults = addition_defaults(DEFAULTS)
         metadata = additions_descriptions(ROOT / MENU_SOURCE)
         en, pt = config_translations([], defaults, metadata)
         for setting in defaults:
